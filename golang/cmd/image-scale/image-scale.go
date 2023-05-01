@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"image-processing-benchmarks/internal/minioimages"
 	"image/jpeg"
 	"io/fs"
 	"log"
@@ -13,6 +12,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/dasbd72/images-processing-benchmarks/golang/internal/minioimages"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"

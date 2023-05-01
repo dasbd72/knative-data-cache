@@ -1,4 +1,4 @@
-module image-processing-benchmarks
+module github.com/dasbd72/images-processing-benchmarks/golang
 
 go 1.20
 
