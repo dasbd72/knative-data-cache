@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"image-processing-benchmarks/internal/minioimages"
@@ -10,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -18,6 +20,7 @@ import (
 )
 
 const (
+	localPath       = "storage/"                         // path of local storage
 	endpoint        = "10.121.240.169:9000"              // without http://
 	accessKeyID     = "LbtKL76UbWedONnd"                 //
 	secretAccessKey = "Bt0Omfh0S3ud5VEQAVR85CwinSULl3Sj" // secret key from minio console
@@ -25,20 +28,22 @@ const (
 )
 
 var (
-	address string
+	port int  // port of host
+	dry  bool // dry run
 )
 
 func init() {
-	flag.StringVar(&address, "address", "0.0.0.0:9090", "The address of host.")
+	flag.IntVar(&port, "port", 9090, "Port of server")
+	flag.BoolVar(&dry, "dry", false, "Dryrun")
 }
 
 func main() {
 	flag.Parse()
 
-	log.Printf("Server address: %s\n", address)
+	log.Printf("Server port: %d\n", port)
 
 	http.HandleFunc("/", handleRequest)
-	log.Fatal(http.ListenAndServe(address, nil))
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(port), nil))
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
@@ -46,10 +51,25 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		fmt.Fprintf(w, "Not For You\n")
 	case "POST":
-		bucketName := "images-processing"                       // minio bucket name
-		downloadPath := "images/"                               // source image path
-		uploadPath := time.Now().Format("20060102150405") + "/" // output image path
-		localPath := "storage/"
+		err := r.ParseForm()
+		if err != nil {
+			fmt.Fprintf(w, "ParseForm() err: %v", err)
+			return
+		}
+
+		var request struct {
+			Bucket string // Bucket name
+			Source string // Path of image directory
+		}
+		err = json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		bucketName := filepath.Clean(request.Bucket)
+		downloadPath := filepath.Clean(request.Source) + "/"
+		uploadPath := filepath.Clean(request.Source) + "-" + time.Now().Format("20060102150405") + "/"
 
 		connect_start := time.Now()
 		// Initialize minio client object.
@@ -65,15 +85,21 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		connect_duration := time.Since(connect_start)
 
 		download_start := time.Now()
-		minioimages.DownloadImages(minioClient, bucketName, downloadPath, localPath)
+		if !dry {
+			minioimages.DownloadImages(minioClient, bucketName, downloadPath, localPath)
+		}
 		download_duration := time.Since(download_start)
 
 		scale_start := time.Now()
-		scaleImages(localPath)
+		if !dry {
+			scaleImages(localPath)
+		}
 		scale_duration := time.Since(scale_start)
 
 		upload_start := time.Now()
-		minioimages.UploadImages(minioClient, bucketName, localPath, uploadPath)
+		if !dry {
+			minioimages.UploadImages(minioClient, bucketName, localPath, uploadPath)
+		}
 		upload_duration := time.Since(upload_start)
 
 		log.Println("Connect:", connect_duration)
