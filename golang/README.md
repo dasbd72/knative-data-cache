@@ -12,12 +12,12 @@ go build -o image-scale cmd/image-scale/image-scale.go
 ```
 Build image
 ```bash=
-docker build -t image-scale -f docker/image-scale.dockerfile .
+docker build -t image-scale:golang -f docker/image-scale.dockerfile .
 ```
 Run container
 ```bash=
-docker container run -it --rm -p 9090:9090 --name image-scale image-scale
-docker container run -d --rm -p 9090:9090 --name image-scale image-scale
+docker container run -it --rm -p 9090:9090 --name image-scale image-scale:golang
+docker container run -d --rm -p 9090:9090 --name image-scale image-scale:golang
 ```
 Request
 ```bash=
