@@ -8,20 +8,32 @@ import argparse
 import uuid
 from minio import Minio
 from PIL import Image
+import torch
+from torchvision.models import resnet50
+from torchvision import transforms
 from flask import Flask, request, make_response
 
+# http server
 app = Flask(__name__)
 
+# Arguments
 parser = argparse.ArgumentParser(
     prog='Image Recognition',
     description='Runs resnet on the images',
 )
-parser.add_argument('-p', '--port', type=int, default=9090)
+parser.add_argument('-p', '--port', type=int, default=9091)
 args = parser.parse_args()
 
+# Minio
 endpoint = "10.121.240.169:9000"
 access_key = "LbtKL76UbWedONnd"
 secret_key = "Bt0Omfh0S3ud5VEQAVR85CwinSULl3Sj"
+
+# Model
+SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
+class_idx = json.load(open(os.path.join(SCRIPT_DIR, "imagenet_class_index.json"), 'r'))
+idx2label = [class_idx[str(k)][1] for k in range(len(class_idx))]
+model = resnet50(pretrained=True)
 
 
 def downloadImages(minio_client: Minio, bucket_name, remote_path, local_path):
@@ -41,13 +53,26 @@ def uploadImages(minio_client: Minio, bucket_name, local_path, remote_path):
     return
 
 
-def scaleImages(local_path, width, height):
+def inference(local_path):
+    #  model
+    model.eval()
+    preprocess = transforms.Compose([
+        transforms.ToTensor(),
+    ])
+    ret_list = []
     for filename in os.listdir(local_path):
         filepath = os.path.join(local_path, filename)
         img = Image.open(filepath)
-        img = img.resize((width, height))
-        img.save(filepath, 'JPEG')
-    return
+        input_tensor = preprocess(img)
+        input_batch = input_tensor.unsqueeze(0)
+        output = model(input_batch)
+        _, index = torch.max(output, 1)
+        # The output has unnormalized scores. To get probabilities, you can run a softmax on it.
+        prob = torch.nn.functional.softmax(output[0], dim=0)
+        _, indices = torch.sort(output, descending=True)
+        ret = idx2label[index]
+        ret_list.append({filename: ret})
+    return ret_list
 
 
 @app.route('/', methods=['POST'])
@@ -80,10 +105,10 @@ def imageRecognition():
     download_end_time = time.perf_counter()
     download_duration = download_end_time - download_start_time
 
-    scale_start_time = time.perf_counter()
-    scaleImages(local_path, 224, 224)
-    scale_end_time = time.perf_counter()
-    scale_duration = scale_end_time - scale_start_time
+    inference_start_time = time.perf_counter()
+    inference_end_time = time.perf_counter()
+    pred_lst = inference(local_path)
+    inference_duration = inference_end_time - inference_start_time
 
     upload_start_time = time.perf_counter()
     uploadImages(minio_client, bucket_name, local_path, upload_path)
@@ -94,15 +119,15 @@ def imageRecognition():
     code_duration = code_end_time - code_start_time
     print(f"Execution time: {code_duration}")
     print(f"Download time: {download_duration}")
-    print(f"Scale time: {scale_duration}")
+    print(f"Inference time: {inference_duration}")
     print(f"Upload time: {upload_duration}")
 
     # send response
-    response = make_response({"Destination":upload_path})
+    response = make_response(json.dumps(pred_lst))
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())
     response.headers["Ce-specversion"] = "0.3"
-    response.headers["Ce-Source"] = "image-scale"
+    response.headers["Ce-Source"] = "image-recognition"
     return response
 
 
