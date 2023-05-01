@@ -60,6 +60,8 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Bucket string // Bucket name
 			Source string // Path of image directory
+			Width  int
+			Height int
 		}
 		err = json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
@@ -82,6 +84,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 		} else {
 			log.Printf("Connected to %s\n", endpoint)
 		}
+		minioimages.CreateBucket(minioClient, bucketName)
 		connect_duration := time.Since(connect_start)
 
 		download_start := time.Now()
@@ -92,7 +95,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 		scale_start := time.Now()
 		if !dry {
-			scaleImages(localPath)
+			scaleImages(localPath, request.Width, request.Height)
 		}
 		scale_duration := time.Since(scale_start)
 
@@ -117,7 +120,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func scaleImages(localPath string) {
+func scaleImages(localPath string, width int, height int) {
 	cnt := 0
 	filepath.Walk(localPath, func(path string, info fs.FileInfo, err error) error {
 		if info.IsDir() {
@@ -136,8 +139,7 @@ func scaleImages(localPath string) {
 		}
 		file.Close()
 
-		// resize to width 1000 using Lanczos resampling and preserve aspect ratio
-		m := resize.Resize(1000, 0, img, resize.Lanczos3)
+		m := resize.Resize(uint(width), uint(height), img, resize.Lanczos3)
 
 		out, err := os.Create(path)
 		if err != nil {

@@ -22,5 +22,5 @@ docker container run -d --rm -p 9090:9090 --name image-scale image-scale
 Request
 ```bash=
 curl -X GET 0.0.0.0:9090
-curl -X POST 0.0.0.0:9090 -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images"}'
+curl -X POST 0.0.0.0:9090 -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images", "Width": 224, "Height": 224}'
 ```
