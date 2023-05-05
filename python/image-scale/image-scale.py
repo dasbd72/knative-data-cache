@@ -59,7 +59,8 @@ def imageRecognition():
 
     bucket_name = data['Bucket'].rstrip("/")
     download_path = data['Source'].rstrip("/") + "/"
-    upload_path = data['Source'].rstrip("/") + "-" + str(datetime.now().strftime("%Y%m%d%H%M%S")) + "/"
+    # upload_path = data['Source'].rstrip("/") + "-" + str(datetime.now().strftime("%Y%m%d%H%M%S")) + "/"
+    upload_path = data['Destination'].rstrip("/") + "/"
     local_path = './storage/'
 
     # remove exist storage and create
@@ -98,7 +99,7 @@ def imageRecognition():
     print(f"Upload time: {upload_duration}")
 
     # send response
-    response = make_response({"Destination":upload_path})
+    response = make_response({})
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())
     response.headers["Ce-specversion"] = "0.3"

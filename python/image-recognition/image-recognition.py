@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser(
     prog='Image Recognition',
     description='Runs resnet on the images',
 )
-parser.add_argument('-p', '--port', type=int, default=9091)
+parser.add_argument('-p', '--port', type=int, default=9090)
 args = parser.parse_args()
 
 # Minio
