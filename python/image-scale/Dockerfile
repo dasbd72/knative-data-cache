@@ -10,5 +10,4 @@ RUN pip install -r requirements.txt
 
 EXPOSE 9090
 
-ENTRYPOINT [ "python" ]
-CMD [ "image-scale.py" ]
+ENTRYPOINT [ "python", "image-scale.py" ]

@@ -22,6 +22,7 @@ parser = argparse.ArgumentParser(
     description='Runs resnet on the images',
 )
 parser.add_argument('-p', '--port', type=int, default=9090)
+parser.add_argument('--storage_path', type=str, default=None)
 args = parser.parse_args()
 
 # Minio
@@ -53,6 +54,12 @@ def uploadImages(minio_client: Minio, bucket_name, local_path, remote_path):
     return
 
 
+def copyImages(src_path, dst_path):
+    if os.path.exists(dst_path):
+        shutil.rmtree(dst_path)
+    shutil.copytree(src_path, dst_path)
+
+
 def inference(local_path):
     #  model
     model.eval()
@@ -82,10 +89,13 @@ def imageRecognition():
     data = request.data.decode("utf-8")
     data = json.loads(data)
 
-    bucket_name = data['Bucket'].rstrip("/")
-    download_path = data['Source'].rstrip("/") + "/"
-    upload_path = data['Source'].rstrip("/") + "-" + str(datetime.now().strftime("%Y%m%d%H%M%S")) + "/"
-    local_path = './storage/'
+    if args.storage_path is not None:
+        download_path = args.storage_path.rstrip("/") + "/" + data['Source'].rstrip("/") + "/"
+        local_path = './storage/'
+    else:
+        bucket_name = data['Bucket'].rstrip("/")
+        download_path = data['Source'].rstrip("/") + "/"
+        local_path = './storage/'
 
     # remove exist storage and create
     if os.path.exists(local_path):
@@ -101,7 +111,10 @@ def imageRecognition():
     print(f"Connected to {endpoint}")
 
     download_start_time = time.perf_counter()
-    downloadImages(minio_client, bucket_name, download_path, local_path)
+    if args.storage_path is not None:
+        copyImages(download_path, local_path)
+    else:
+        downloadImages(minio_client, bucket_name, download_path, local_path)
     download_end_time = time.perf_counter()
     download_duration = download_end_time - download_start_time
 
@@ -110,17 +123,11 @@ def imageRecognition():
     pred_lst = inference(local_path)
     inference_duration = inference_end_time - inference_start_time
 
-    upload_start_time = time.perf_counter()
-    uploadImages(minio_client, bucket_name, local_path, upload_path)
-    upload_end_time = time.perf_counter()
-    upload_duration = upload_end_time - upload_start_time
-
     code_end_time = time.perf_counter()
     code_duration = code_end_time - code_start_time
     print(f"Execution time: {code_duration}")
     print(f"Download time: {download_duration}")
     print(f"Inference time: {inference_duration}")
-    print(f"Upload time: {upload_duration}")
 
     # send response
     response = make_response(json.dumps(pred_lst))

@@ -11,5 +11,4 @@ RUN pip3 install torch torchvision torchaudio --extra-index-url https://download
 
 EXPOSE 9090
 
-ENTRYPOINT [ "python" ]
-CMD [ "image-recognition.py" ]
+ENTRYPOINT [ "python", "image-recognition.py" ]
