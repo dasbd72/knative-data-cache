@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(
     prog='Image Recognition',
     description='Runs resnet on the images',
 )
-parser.add_argument('-p', '--port', type=int, default=9090)
+parser.add_argument('-p', '--port', type=int, default=8080)
 parser.add_argument('--storage_path', type=str, default=None)
 args = parser.parse_args()
 

@@ -8,6 +8,6 @@ WORKDIR /app
 COPY . ./
 RUN pip install -r requirements.txt
 
-EXPOSE 9090
+EXPOSE 8080
 
 ENTRYPOINT [ "python", "image-scale.py" ]
