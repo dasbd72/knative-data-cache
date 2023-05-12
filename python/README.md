@@ -59,3 +59,29 @@ Request
 ```bash=
 curl -X POST 0.0.0.0:9091 -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images-scaled"}'
 ```
+
+## Deploy to knative
+
+Configure knative settings
+```bash=
+kubectl edit cm config-features -n knative-serving
+```
+
+Add right below data
+```yaml=
+data:
+  "kubernetes.podspec-persistent-volume-claim": enabled
+  "kubernetes.podspec-persistent-volume-write": enabled
+  "kubernetes.podspec-init-containers": enalbed
+```
+
+```bash=
+kubectl apply -f https://raw.githubusercontent.com/dasbd72/images-processing-benchmarks/master/python/yamls/pv.yaml
+kubectl apply -f https://raw.githubusercontent.com/dasbd72/images-processing-benchmarks/master/python/yamls/pvc.yaml
+kubectl apply -f https://raw.githubusercontent.com/dasbd72/images-processing-benchmarks/master/python/yamls/steps.yaml
+```
+
+```bash=
+curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images", "Destination":"images-scaled"}'
+curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images-scaled"}'
+```
