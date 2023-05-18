@@ -21,11 +21,11 @@ docker container run -it --rm -p 9090:8080 --name image-scale-py dasbd72/image-s
 docker container run -d --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python
 
 # Local storage
-docker container run -v /dev/shm:/shm -it --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python --storage_path /shm
-docker container run -v /dev/shm:/shm -d  --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python --storage_path /shm
+docker container run -v /dev/shm:/shm -it --rm -p 9090:8080 -e MANAGER_URL="0.0.0.0" -e STORAGE_PATH="/shm" --name image-scale-py dasbd72/image-scale:python
+docker container run -v /dev/shm:/shm -d  --rm -p 9090:8080 -e MANAGER_URL="0.0.0.0" -e STORAGE_PATH="/shm" --name image-scale-py dasbd72/image-scale:python
 
-docker container run -v /home/jerry2022/tmp:/disk -it --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python --storage_path /disk
-docker container run -v /home/jerry2022/tmp:/disk -d  --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python --storage_path /disk
+docker container run -v /home/jerry2022/tmp:/disk -it --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python
+docker container run -v /home/jerry2022/tmp:/disk -d  --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python
 ```
 Request
 ```bash=

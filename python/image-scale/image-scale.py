@@ -6,18 +6,17 @@ from datetime import date, datetime
 
 import argparse
 import uuid
-from minio import Minio
+from wrapper import MinioWrapper as Minio
 from PIL import Image
 from flask import Flask, request, make_response
 
 app = Flask(__name__)
 
 parser = argparse.ArgumentParser(
-    prog='Image Recognition',
-    description='Runs resnet on the images',
+    prog='Image Scale',
+    description='Scales the images to 224x224',
 )
 parser.add_argument('-p', '--port', type=int, default=8080)
-parser.add_argument('--storage_path', type=str, default=None)
 args = parser.parse_args()
 
 endpoint = "10.121.240.169:9000"
@@ -42,12 +41,6 @@ def uploadImages(minio_client: Minio, bucket_name, local_path, remote_path):
     return
 
 
-def copyImages(src_path, dst_path):
-    if os.path.exists(dst_path):
-        shutil.rmtree(dst_path)
-    shutil.copytree(src_path, dst_path)
-
-
 def scaleImages(local_path, width, height):
     for filename in os.listdir(local_path):
         filepath = os.path.join(local_path, filename)
@@ -64,16 +57,10 @@ def imageRecognition():
     data = request.data.decode("utf-8")
     data = json.loads(data)
 
-    if args.storage_path is not None:
-        bucket_name = data['Bucket'].rstrip("/")
-        download_path = data['Source'].rstrip("/") + "/"
-        upload_path = args.storage_path.rstrip("/") + "/" + data['Destination'].rstrip("/") + "/"
-        local_path = './storage/'
-    else:
-        bucket_name = data['Bucket'].rstrip("/")
-        download_path = data['Source'].rstrip("/") + "/"
-        upload_path = data['Destination'].rstrip("/") + "/"
-        local_path = './storage/'
+    bucket_name = data['Bucket'].rstrip("/")
+    download_path = data['Source'].rstrip("/") + "/"
+    upload_path = data['Destination'].rstrip("/") + "/"
+    local_path = './storage/'
 
     # remove exist storage and create
     if os.path.exists(local_path):
@@ -99,11 +86,7 @@ def imageRecognition():
     scale_duration = scale_end_time - scale_start_time
 
     upload_start_time = time.perf_counter()
-    if args.storage_path is not None:
-        copyImages(local_path, upload_path)
-    else:
-        uploadImages(minio_client, bucket_name, local_path, upload_path)
-
+    uploadImages(minio_client, bucket_name, local_path, upload_path)
     upload_end_time = time.perf_counter()
     upload_duration = upload_end_time - upload_start_time
 
