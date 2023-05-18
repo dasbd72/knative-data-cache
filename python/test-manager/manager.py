@@ -21,7 +21,7 @@ def manager():
     data = request.data.decode("utf-8")
     data = json.loads(data)
     bucket_name = data['Bucket'].rstrip("/")
-    storage_name = data['Storage'].rstrip("/")
+    object_name = data['Object'].rstrip("/")
 
     response = make_response({"Result": False})
     response.headers["Content-Type"] = "application/json"

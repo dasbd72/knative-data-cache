@@ -1,5 +1,6 @@
 import os
 import shutil
+import requests
 from minio import Minio
 
 
@@ -7,15 +8,24 @@ class Manager:
     def __init__(self) -> None:
         if "MANAGER_URL" in os.environ.keys():
             self.manager_url = os.environ["MANAGER_URL"]
+            print(f"MANAGER_URL: {self.manager_url}")
         else:
             self.manager_url = None
         if "STORAGE_PATH" in os.environ.keys():
             self.storage_path = os.environ["STORAGE_PATH"]
+            print(f"STORAGE_PATH: {self.storage_path}")
         else:
             self.storage_path = None
 
     def is_remote(self, bucket_name, object_name) -> bool:
         if not self.manager_url or not self.storage_path:
+            return True
+        try:
+            result = requests.post(self.manager_url, json={'Bucket': bucket_name, 'Object': object_name})
+            result = result.json()
+            if 'Result' in result.keys():
+                return result['Result']
+        except:
             return True
         return True
 
@@ -46,6 +56,9 @@ class MinioWrapper(Minio):
             super().fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
         else:
             dst = self.manager.get_local_path(bucket_name, object_name)
+            if os.path.exists(dst):
+                shutil.rmtree(dst)
+            os.makedirs(dst)
             shutil.copy(file_path, dst)
 
     def fget_object(self, bucket_name, object_name, file_path,

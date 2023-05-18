@@ -4,30 +4,47 @@
 
 Follow the request commands bellow
 
+## Test Manager
+
+Build image
+
+```bash=
+docker build -t dasbd72/test-manager:python ./test-manager
+```
+
+Run container
+
+```bash=
+docker container run -it --rm -p 8080:8080 --name test-manager dasbd72/test-manager:python
+```
+
 ## Image Scale
 
 Build image
+
 ```bash=
 docker build -t dasbd72/image-scale:python ./image-scale
 ```
+
 Pull image
+
 ```bash=
 docker pull dasbd72/image-scale:python
 ```
+
 Run container
+
 ```bash=
 # Remote storage
 docker container run -it --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python
 docker container run -d --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python
 
 # Local storage
-docker container run -v /dev/shm:/shm -it --rm -p 9090:8080 -e MANAGER_URL="0.0.0.0" -e STORAGE_PATH="/shm" --name image-scale-py dasbd72/image-scale:python
-docker container run -v /dev/shm:/shm -d  --rm -p 9090:8080 -e MANAGER_URL="0.0.0.0" -e STORAGE_PATH="/shm" --name image-scale-py dasbd72/image-scale:python
-
-docker container run -v /home/jerry2022/tmp:/disk -it --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python
-docker container run -v /home/jerry2022/tmp:/disk -d  --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python
+docker container run -v /dev/shm:/shm -it --rm -p 9090:8080 -e MANAGER_URL="http://$(docker container inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' test-manager):8080" -e STORAGE_PATH="/shm" --name image-scale-py dasbd72/image-scale:python
 ```
+
 Request
+
 ```bash=
 curl -X POST 0.0.0.0:9090 -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images", "Destination":"images-scaled"}'
 ```
@@ -35,14 +52,19 @@ curl -X POST 0.0.0.0:9090 -H 'Content-Type: application/json' -d '{"Bucket":"ima
 ## Image Recognition
 
 Build image
+
 ```bash=
 docker build -t dasbd72/image-recognition:python ./image-recognition
 ```
+
 Pull image
+
 ```bash=
 docker pull dasbd72/image-recognition:python
 ```
+
 Run container
+
 ```bash=
 # Remote storage
 docker container run -it --rm -p 9091:8080 --name image-recognition-py dasbd72/image-recognition:python
@@ -55,7 +77,9 @@ docker container run -v /dev/shm:/shm -d  --rm -p 9091:8080 --name image-recogni
 docker container run -v /home/jerry2022/tmp:/disk -it --rm -p 9091:8080 --name image-recognition-py dasbd72/image-recognition:python --storage_path /disk
 docker container run -v /home/jerry2022/tmp:/disk -d  --rm -p 9091:8080 --name image-recognition-py dasbd72/image-recognition:python --storage_path /disk
 ```
+
 Request
+
 ```bash=
 curl -X POST 0.0.0.0:9091 -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images-scaled"}'
 ```
@@ -63,11 +87,13 @@ curl -X POST 0.0.0.0:9091 -H 'Content-Type: application/json' -d '{"Bucket":"ima
 ## Deploy to knative
 
 Configure knative settings
+
 ```bash=
 kubectl edit cm config-features -n knative-serving
 ```
 
 Add right below data
+
 ```yaml=
 data:
   "kubernetes.podspec-persistent-volume-claim": enabled
