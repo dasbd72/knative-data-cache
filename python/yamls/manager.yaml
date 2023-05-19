@@ -17,7 +17,3 @@ spec:
         - name: shared-volume
           persistentVolumeClaim:
             claimName: shared-volume-claim
-
-
-
-
