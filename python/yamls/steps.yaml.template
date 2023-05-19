@@ -15,7 +15,7 @@ spec:
           - name: MANAGER_URL
             value: tmp_manager_url
           - name: LOCAL_STORAGE
-            value: tmp_local_storage     
+            value: /shared   
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
@@ -38,7 +38,7 @@ spec:
           - name: MANAGER_URL
             value: tmp_manager_url
           - name: LOCAL_STORAGE
-            value: tmp_local_storage 
+            value: /shared
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
