@@ -37,10 +37,12 @@ Run container
 ```bash=
 # Remote storage
 docker container run -it --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python
-docker container run -d --rm -p 9090:8080 --name image-scale-py dasbd72/image-scale:python
 
 # Local storage
-docker container run -v /dev/shm:/shm -it --rm -p 9090:8080 -e MANAGER_URL="http://$(docker container inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' test-manager):8080" -e STORAGE_PATH="/shm" --name image-scale-py dasbd72/image-scale:python
+docker container run -it --rm -p 9090:8080 -v /dev/shm:/shm --name image-scale-py \
+  -e MANAGER_URL="http://$(docker container inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' test-manager):8080" \
+  -e STORAGE_PATH="/shm" \
+  dasbd72/image-scale:python
 ```
 
 Request
@@ -68,14 +70,12 @@ Run container
 ```bash=
 # Remote storage
 docker container run -it --rm -p 9091:8080 --name image-recognition-py dasbd72/image-recognition:python
-docker container run -d --rm -p 9091:8080 --name image-recognition-py dasbd72/image-recognition:python
 
 # Local storage
-docker container run -v /dev/shm:/shm -it --rm -p 9091:8080 --name image-recognition-py dasbd72/image-recognition:python --storage_path /shm
-docker container run -v /dev/shm:/shm -d  --rm -p 9091:8080 --name image-recognition-py dasbd72/image-recognition:python --storage_path /shm
-
-docker container run -v /home/jerry2022/tmp:/disk -it --rm -p 9091:8080 --name image-recognition-py dasbd72/image-recognition:python --storage_path /disk
-docker container run -v /home/jerry2022/tmp:/disk -d  --rm -p 9091:8080 --name image-recognition-py dasbd72/image-recognition:python --storage_path /disk
+docker container run -it --rm -p 9091:8080 -v /dev/shm:/shm --name image-recognition-py \
+  -e MANAGER_URL="http://$(docker container inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' test-manager):8080" \
+  -e STORAGE_PATH="/shm" \
+  dasbd72/image-recognition:python
 ```
 
 Request

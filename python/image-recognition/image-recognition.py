@@ -6,10 +6,10 @@ from datetime import date, datetime
 
 import argparse
 import uuid
-from minio import Minio
+from wrapper import MinioWrapper as Minio
 from PIL import Image
 import torch
-from torchvision.models import resnet50
+from torchvision.models import resnet50, ResNet50_Weights
 from torchvision import transforms
 from flask import Flask, request, make_response
 
@@ -22,7 +22,6 @@ parser = argparse.ArgumentParser(
     description='Runs resnet on the images',
 )
 parser.add_argument('-p', '--port', type=int, default=8080)
-parser.add_argument('--storage_path', type=str, default=None)
 args = parser.parse_args()
 
 # Minio
@@ -34,7 +33,7 @@ secret_key = "Bt0Omfh0S3ud5VEQAVR85CwinSULl3Sj"
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 class_idx = json.load(open(os.path.join(SCRIPT_DIR, "imagenet_class_index.json"), 'r'))
 idx2label = [class_idx[str(k)][1] for k in range(len(class_idx))]
-model = resnet50(pretrained=True)
+model = resnet50(weights=ResNet50_Weights.DEFAULT)
 
 
 def downloadImages(minio_client: Minio, bucket_name, remote_path, local_path):
@@ -52,12 +51,6 @@ def uploadImages(minio_client: Minio, bucket_name, local_path, remote_path):
         filepath = os.path.join(local_path, filename)
         minio_client.fput_object(bucket_name, remote_path + filename, filepath)
     return
-
-
-def copyImages(src_path, dst_path):
-    if os.path.exists(dst_path):
-        shutil.rmtree(dst_path)
-    shutil.copytree(src_path, dst_path)
 
 
 def inference(local_path):
@@ -89,13 +82,9 @@ def imageRecognition():
     data = request.data.decode("utf-8")
     data = json.loads(data)
 
-    if args.storage_path is not None:
-        download_path = args.storage_path.rstrip("/") + "/" + data['Source'].rstrip("/") + "/"
-        local_path = './storage/'
-    else:
-        bucket_name = data['Bucket'].rstrip("/")
-        download_path = data['Source'].rstrip("/") + "/"
-        local_path = './storage/'
+    bucket_name = data['Bucket'].rstrip("/")
+    download_path = data['Source'].rstrip("/") + "/"
+    local_path = './storage/'
 
     # remove exist storage and create
     if os.path.exists(local_path):
@@ -111,10 +100,7 @@ def imageRecognition():
     print(f"Connected to {endpoint}")
 
     download_start_time = time.perf_counter()
-    if args.storage_path is not None:
-        copyImages(download_path, local_path)
-    else:
-        downloadImages(minio_client, bucket_name, download_path, local_path)
+    downloadImages(minio_client, bucket_name, download_path, local_path)
     download_end_time = time.perf_counter()
     download_duration = download_end_time - download_start_time
 
