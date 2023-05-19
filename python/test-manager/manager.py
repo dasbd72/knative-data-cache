@@ -23,7 +23,11 @@ def manager():
     bucket_name = data['Bucket'].rstrip("/")
     object_name = data['Object'].rstrip("/")
 
-    response = make_response({"Result": False})
+    result = True
+    if bucket_name == "images-processing" and os.path.dirname(object_name) == "images-scaled":
+        result = False
+
+    response = make_response({"Result": result})
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())
     response.headers["Ce-specversion"] = "0.3"
