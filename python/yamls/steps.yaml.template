@@ -1,0 +1,45 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: image-scale
+spec:
+  template:
+    spec:
+      containers:
+        - image: docker.io/dasbd72/image-scale:python
+          name: image-scale
+          volumeMounts:
+            - mountPath: /shared
+              name: shared-volume
+        env:
+          - name: MANAGER_URL
+            value: tmp_manager_url
+          - name: LOCAL_STORAGE
+            value: tmp_local_storage     
+      volumes:
+        - name: shared-volume
+          persistentVolumeClaim:
+            claimName: shared-volume-claim
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: image-recognition
+spec:
+  template:
+    spec:
+      containers:
+        - image: docker.io/dasbd72/image-recognition:python
+          name: image-recognition
+          volumeMounts:
+            - mountPath: /shared
+              name: shared-volume
+        env:
+          - name: MANAGER_URL
+            value: tmp_manager_url
+          - name: LOCAL_STORAGE
+            value: tmp_local_storage 
+      volumes:
+        - name: shared-volume
+          persistentVolumeClaim:
+            claimName: shared-volume-claim
