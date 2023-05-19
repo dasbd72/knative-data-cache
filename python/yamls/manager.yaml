@@ -1,0 +1,23 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+
+metadata:
+  name: manager
+
+spec:
+  template:
+    spec:
+      containers:
+        - image: docker.io/johnson684/manager:latest
+          name: my-container1
+          volumeMounts:
+            - mountPath: /shared
+              name: shared-volume
+      volumes:
+        - name: shared-volume
+          persistentVolumeClaim:
+            claimName: shared-volume-claim
+
+
+
+
