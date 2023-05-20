@@ -8,8 +8,8 @@ spec:
   template:
     spec:
       containers:
-        - image: docker.io/johnson684/manager:latest
-          name: my-container1
+        - image: dasbd72/manager:python
+          name: manager-container
           volumeMounts:
             - mountPath: /shared
               name: shared-volume

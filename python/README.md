@@ -18,12 +18,22 @@ Run container
 docker container run -it --rm -p 8080:8080 --name test-manager dasbd72/test-manager:python
 ```
 
+## Manager
+
+Build image
+
+```bash=
+docker build -t dasbd72/manager:python ./manager
+docker push dasbd72/manager:python
+```
+
 ## Image Scale
 
 Build image
 
 ```bash=
 docker build -t dasbd72/image-scale:python ./image-scale
+docker push dasbd72/image-scale:python
 ```
 
 Pull image
@@ -57,6 +67,7 @@ Build image
 
 ```bash=
 docker build -t dasbd72/image-recognition:python ./image-recognition
+docker push dasbd72/image-recognition:python
 ```
 
 Pull image
@@ -102,12 +113,11 @@ data:
 ```
 
 ```bash=
-kubectl apply -f https://raw.githubusercontent.com/dasbd72/images-processing-benchmarks/master/python/yamls/pv.yaml
-kubectl apply -f https://raw.githubusercontent.com/dasbd72/images-processing-benchmarks/master/python/yamls/pvc.yaml
-kubectl apply -f https://raw.githubusercontent.com/dasbd72/images-processing-benchmarks/master/python/yamls/steps.yaml
+bash start_service.sh
 ```
 
 ```bash=
+curl -X POST http://manager.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Object":"images/"}'
 curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images", "Destination":"images-scaled"}'
 curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images-scaled"}'
 ```

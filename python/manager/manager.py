@@ -1,8 +1,11 @@
-import shutil
-from curses.ascii import isalpha
 import os
-from kubernetes import client, config
+import shutil
+import json
+
+import uuid
 from flask import Flask, request, make_response
+from kubernetes import client, config
+
 app = Flask(__name__)
 
 
@@ -52,10 +55,33 @@ def get_pv_usage(v1, pvName):
     return storage_usage, storage_capacity
 
 
-@app.route('/', methods=['POST'])
-def handle_request():
-    config.load_incluster_config()
+@app.route('/download', methods=['POST'])
+def handle_download_request():
+    data = request.data.decode("utf-8")
+    data = json.loads(data)
+    bucket_name = data['Bucket'].rstrip("/")
+    object_name = data['Object'].rstrip("/")
 
+    result = False
+    if bucket_name == "images-processing" and os.path.dirname(object_name) == "images-scaled":
+        result = True
+
+    response = make_response({"Result": result})
+    response.headers["Content-Type"] = "application/json"
+    response.headers["Ce-Id"] = str(uuid.uuid4())
+    response.headers["Ce-specversion"] = "0.3"
+    response.headers["Ce-Source"] = "test-manager"
+    return response
+
+
+@app.route('/upload', methods=['POST'])
+def handle_upload_request():
+    data = request.data.decode("utf-8")
+    data = json.loads(data)
+    bucket_name = data['Bucket'].rstrip("/")
+    object_name = data['Object'].rstrip("/")
+
+    config.load_incluster_config()
     v1 = client.CoreV1Api()
 
     memory_allocatable, memory_capacity = get_mem_usage(v1, "")
@@ -74,10 +100,17 @@ def handle_request():
 
     mem_cap = int(memory_capacity[0:-2])
     mem_aloc = int(memory_allocatable[0:-2])
+
+    result = False
     if (mem_aloc/mem_cap > 0.2 and volume_usage['free_size'] > 50):
-        return 'True'
-    else:
-        return 'False'
+        result = True
+
+    response = make_response({"Result": result})
+    response.headers["Content-Type"] = "application/json"
+    response.headers["Ce-Id"] = str(uuid.uuid4())
+    response.headers["Ce-specversion"] = "0.3"
+    response.headers["Ce-Source"] = "test-manager"
+    return response
 
 
 if __name__ == '__main__':

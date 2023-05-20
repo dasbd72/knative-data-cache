@@ -103,19 +103,20 @@ class MinioWrapper(Minio):
         for obj in remote_objects:
             yield obj
 
-        if os.path.exists(os.path.join(self.manager.storage_path, bucket_name, prefix)):
-            bucket_dir = os.path.join(self.manager.storage_path, bucket_name)
-            if prefix.endswith("/"):
-                object_dir = os.path.normpath(prefix)
-                files = os.listdir(os.path.join(bucket_dir, object_dir))
-            else:
-                object_dir = os.path.normpath(os.path.dirname(prefix))
-                files = os.listdir(os.path.join(bucket_dir, object_dir))
-            for file in files:
-                filename = os.path.normpath(os.path.join(object_dir, file))
-                if os.path.isdir(os.path.join(bucket_dir, filename)):
-                    filename += "/"
-                if filename.startswith(prefix):
-                    yield Object(bucket_name, filename)
+        if self.manager.storage_path:
+            if os.path.exists(os.path.join(self.manager.storage_path, bucket_name, prefix)):
+                bucket_dir = os.path.join(self.manager.storage_path, bucket_name)
+                if prefix.endswith("/"):
+                    object_dir = os.path.normpath(prefix)
+                    files = os.listdir(os.path.join(bucket_dir, object_dir))
+                else:
+                    object_dir = os.path.normpath(os.path.dirname(prefix))
+                    files = os.listdir(os.path.join(bucket_dir, object_dir))
+                for file in files:
+                    filename = os.path.normpath(os.path.join(object_dir, file))
+                    if os.path.isdir(os.path.join(bucket_dir, filename)):
+                        filename += "/"
+                    if filename.startswith(prefix):
+                        yield Object(bucket_name, filename)
 
     """ Increased Methods """

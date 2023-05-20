@@ -11,11 +11,11 @@ spec:
           volumeMounts:
             - mountPath: /shared
               name: shared-volume
-        env:
-          - name: MANAGER_URL
-            value: tmp_manager_url
-          - name: LOCAL_STORAGE
-            value: /shared   
+          env:
+            - name: MANAGER_URL
+              value: tmp_manager_url
+            - name: STORAGE_PATH
+              value: /shared
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
@@ -34,11 +34,11 @@ spec:
           volumeMounts:
             - mountPath: /shared
               name: shared-volume
-        env:
-          - name: MANAGER_URL
-            value: tmp_manager_url
-          - name: LOCAL_STORAGE
-            value: /shared
+          env:
+            - name: MANAGER_URL
+              value: tmp_manager_url
+            - name: STORAGE_PATH
+              value: /shared
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
