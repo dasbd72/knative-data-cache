@@ -16,16 +16,33 @@ parser.add_argument('-p', '--port', type=int, default=8080)
 args = parser.parse_args()
 
 
-@app.route('/', methods=['POST'])
-def manager():
+@app.route('/download', methods=['POST'])
+def download_manager():
+    data = request.data.decode("utf-8")
+    data = json.loads(data)
+    bucket_name = data['Bucket'].rstrip("/")
+    object_name = data['Object'].rstrip("/")
+
+    result = False
+    if bucket_name == "images-processing" and os.path.dirname(object_name) == "images-scaled":
+        result = True
+
+    response = make_response({"Result": result})
+    response.headers["Content-Type"] = "application/json"
+    response.headers["Ce-Id"] = str(uuid.uuid4())
+    response.headers["Ce-specversion"] = "0.3"
+    response.headers["Ce-Source"] = "test-manager"
+    return response
+
+
+@app.route('/upload', methods=['POST'])
+def upload_manager():
     data = request.data.decode("utf-8")
     data = json.loads(data)
     bucket_name = data['Bucket'].rstrip("/")
     object_name = data['Object'].rstrip("/")
 
     result = True
-    if bucket_name == "images-processing" and os.path.dirname(object_name) == "images-scaled":
-        result = False
 
     response = make_response({"Result": result})
     response.headers["Content-Type"] = "application/json"
