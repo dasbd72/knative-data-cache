@@ -117,7 +117,7 @@ bash start_service.sh
 ```
 
 ```bash=
-curl -X POST http://manager.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Object":"images/"}'
+curl -X POST http://manager.default.127.0.0.1.sslip.io/download -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Object":"images/"}'
 curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images", "Destination":"images-scaled"}'
 curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images-scaled"}'
 ```
