@@ -1,15 +1,31 @@
-apiVersion: serving.knative.dev/v1
-kind: Service
-
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: manager
-
+  name: manager-deployment
+  labels:
+    app.kubernetes.io/name: manager
 spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: manager
   template:
+    metadata:
+      labels:
+        app: manager
     spec:
       containers:
-        - image: dasbd72/manager:python
-          name: manager-container
+        - name: manager-container
+          image: dasbd72/manager:python
+          resources:
+            requests:
+              cpu: 30m
+              memory: 40Mi
+            limits:
+              cpu: 300m
+              memory: 400Mi
+          ports:
+            - containerPort: 8080
           volumeMounts:
             - mountPath: /shared
               name: shared-volume
@@ -17,3 +33,17 @@ spec:
         - name: shared-volume
           persistentVolumeClaim:
             claimName: shared-volume-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: manager
+  name: manager
+spec:
+  ports:
+    - name: http-manager
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: manager

@@ -8,7 +8,7 @@ kubectl apply -f yamls/clusterrolebinding.yaml
 kubectl apply -f yamls/manager.yaml
 
 # sample value for your variables
-MANAGER_URL=$(kubectl get ksvc manager --template '{{.status.url}}')
+MANAGER_URL="http://manager:8080"
 
 # read the yml template from a file and substitute the string 
 # {{MYVARNAME}} with the value of the MYVARVALUE variable
