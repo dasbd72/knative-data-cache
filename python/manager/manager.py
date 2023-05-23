@@ -1,13 +1,22 @@
 import os
 import shutil
 import json
-
+import threading
 import uuid
 from flask import Flask, request, make_response
 from kubernetes import client, config
+from minio import Minio
+from minio.datatypes import Object
 
 app = Flask(__name__)
+databaseClient = None
 
+
+
+def parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold):
+    global databaseClient
+    databaseClient.fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
+    
 
 def get_host_volume_usage(directory):
     # Get disk usage statistics of the specified directory on the host
@@ -54,16 +63,32 @@ def get_pv_usage(v1, pvName):
 
     return storage_usage, storage_capacity
 
+@app.route('/init', methods=['POST'])
+def init():
+    global databaseClient
+    data = request.data.decode("utf-8")
+    data = json.loads(data)
+    endpoint = data['Endpoint']
+    access_key = data['AccessKey']
+    secret_key = data['SecretKey']
+    session_token = data['SessionToken']
+    secure = data['Secure']
+    region = data['Region']
+    http_client = data['HttpClient']
+    credentials = data['Credentials']
+    databaseClient = Minio(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
 
 @app.route('/download', methods=['POST'])
 def handle_download_request():
     data = request.data.decode("utf-8")
     data = json.loads(data)
+    storage_path = data['STORAGE_PATH'].rstrip("/")
     bucket_name = data['Bucket'].rstrip("/")
     object_name = data['Object'].rstrip("/")
 
+    dst = os.path.join(storage_path, bucket_name, object_name)
     result = False
-    if bucket_name == "images-processing" and os.path.dirname(object_name) == "images-scaled":
+    if os.path.exists(dst):
         result = True
 
     response = make_response({"Result": result})
@@ -80,6 +105,16 @@ def handle_upload_request():
     data = json.loads(data)
     bucket_name = data['Bucket'].rstrip("/")
     object_name = data['Object'].rstrip("/")
+    file_path = data['FilePath']
+    content_type = data['ContentType']
+    metadata = data['Metadata']
+    sse = data['SSE']
+    progress = data['Progress']
+    part_size = data['PartSize']
+    num_parallel_uploads = data['NumParallelUploads']
+    tags = data['Tags']
+    retention = data['Retention']
+    legal_hold = data['LegalHold']
 
     config.load_incluster_config()
     v1 = client.CoreV1Api()
@@ -101,10 +136,12 @@ def handle_upload_request():
     mem_cap = int(memory_capacity[0:-2])
     mem_aloc = int(memory_allocatable[0:-2])
 
-    result = False
+    result = True
     if (mem_aloc/mem_cap > 0.2 and volume_usage['free_size'] > 50):
         result = True
-
+    if result:
+        thread = threading.Thread(target=parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold))
+        thread.start()
     response = make_response({"Result": result})
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())
