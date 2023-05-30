@@ -6,7 +6,7 @@ spec:
   template:
     spec:
       containers:
-        - image: docker.io/dasbd72/image-scale:python
+        - image: docker.io/johnson684/image-scale:python
           name: image-scale
           volumeMounts:
             - mountPath: /shared
@@ -29,7 +29,7 @@ spec:
   template:
     spec:
       containers:
-        - image: docker.io/dasbd72/image-recognition:python
+        - image: docker.io/johnson684/image-recognition:python
           name: image-recognition
           volumeMounts:
             - mountPath: /shared

@@ -13,10 +13,13 @@ databaseClient = None
 
 
 
-def parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold):
-    global databaseClient
+def parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold,
+    endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials):
+    print(1)
+    databaseClient = Minio(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
+    print(2)
     databaseClient.fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
-    
+    print("successfully upload to remote by manager")
 
 def get_host_volume_usage(directory):
     # Get disk usage statistics of the specified directory on the host
@@ -63,20 +66,20 @@ def get_pv_usage(v1, pvName):
 
     return storage_usage, storage_capacity
 
-@app.route('/init', methods=['POST'])
-def init():
-    global databaseClient
-    data = request.data.decode("utf-8")
-    data = json.loads(data)
-    endpoint = data['Endpoint']
-    access_key = data['AccessKey']
-    secret_key = data['SecretKey']
-    session_token = data['SessionToken']
-    secure = data['Secure']
-    region = data['Region']
-    http_client = data['HttpClient']
-    credentials = data['Credentials']
-    databaseClient = Minio(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
+# @app.route('/init', methods=['POST'])
+# def init():
+#     global databaseClient
+#     data = request.data.decode("utf-8")
+#     data = json.loads(data)
+#     endpoint = data['Endpoint']
+#     access_key = data['AccessKey']
+#     secret_key = data['SecretKey']
+#     session_token = data['SessionToken']
+#     secure = data['Secure']
+#     region1 = data['Region']
+#     http_client = data['HttpClient']
+#     credentials = data['Credentials']
+#     databaseClient = Minio(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
 
 @app.route('/download', methods=['POST'])
 def handle_download_request():
@@ -102,20 +105,7 @@ def handle_download_request():
 @app.route('/upload', methods=['POST'])
 def handle_upload_request():
     data = request.data.decode("utf-8")
-    data = json.loads(data)
-    bucket_name = data['Bucket'].rstrip("/")
-    object_name = data['Object'].rstrip("/")
-    file_path = data['FilePath']
-    content_type = data['ContentType']
-    metadata = data['Metadata']
-    sse = data['SSE']
-    progress = data['Progress']
-    part_size = data['PartSize']
-    num_parallel_uploads = data['NumParallelUploads']
-    tags = data['Tags']
-    retention = data['Retention']
-    legal_hold = data['LegalHold']
-
+    data = json.loads(data)    
     config.load_incluster_config()
     v1 = client.CoreV1Api()
 
@@ -136,13 +126,50 @@ def handle_upload_request():
     mem_cap = int(memory_capacity[0:-2])
     mem_aloc = int(memory_allocatable[0:-2])
 
-    result = True
+    result = False
     if (mem_aloc/mem_cap > 0.2 and volume_usage['free_size'] > 50):
         result = True
-    if result:
-        thread = threading.Thread(target=parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold))
-        thread.start()
+     
     response = make_response({"Result": result})
+    response.headers["Content-Type"] = "application/json"
+    response.headers["Ce-Id"] = str(uuid.uuid4())
+    response.headers["Ce-specversion"] = "0.3"
+    response.headers["Ce-Source"] = "test-manager"
+    return response
+
+@app.route('/backup', methods=['POST'])
+def handle_backup_request():
+    data = request.data.decode("utf-8")
+    data = json.loads(data)
+    bucket_name = data['Bucket'].rstrip("/")
+    object_name = data['Object'].rstrip("/")
+    file_path = data['FilePath']
+    content_type = data['ContentType']
+    metadata = data['Metadata']
+    sse = data['SSE']
+    progress = data['Progress']
+    part_size = data['PartSize']
+    num_parallel_uploads = data['NumParallelUploads']
+    tags = data['Tags']
+    retention = data['Retention']
+    legal_hold = data['LegalHold']
+
+    endpoint = data['EndPoint']
+    access_key = data['AccessKey']
+    secret_key = data['SecretKey']
+    session_token = data['SessionToken']
+    secure = data['Secure']
+    region = data['Region']
+    http_client =data['HttpClient']
+    credentials = data['Credential']
+    
+    print("trying parallel_upload")
+    thread = threading.Thread(target=parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold,
+    endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials))
+    thread.start()
+     
+    response = make_response({"Result": True})
+
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())
     response.headers["Ce-specversion"] = "0.3"
