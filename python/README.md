@@ -118,7 +118,7 @@ bash start_service.sh
 
 ```bash=
 kubectl port-forward services/manager 8080:8080
-curl -X POST localhost:8080/download -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Object":"images/"}'
+curl -X POST localhost:8080/download -H 'Content-Type: application/json' -d '{"STORAGE_PATH":"/shared", "Bucket":"images-processing", "Object":"images/"}'
 curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images", "Destination":"images-scaled"}'
 curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"Bucket":"images-processing", "Source":"images-scaled"}'
 ```
