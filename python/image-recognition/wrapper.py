@@ -18,15 +18,53 @@ class Manager:
         else:
             self.storage_path = None
 
+    def backup(self, bucket_name, object_name, file_path,
+                    content_type="application/octet-stream",
+                    metadata=None, sse=None, progress=None,
+                    part_size=0, num_parallel_uploads=3,
+                    tags=None, retention=None, legal_hold=False, minio_init=[]) -> bool:
+        if not self.manager_url or not self.storage_path:
+            return False
+        #try:
+        print("trying to post manager to backup")
+        result = requests.post(self.manager_url + "/backup", json={
+            'Bucket': bucket_name,
+            'Object': object_name,
+            'FilePath': file_path,
+            'ContentType': content_type,
+            'Metadata': metadata,
+            'SSE': sse,
+            'Progress': progress,
+            'PartSize': part_size,
+            'NumParallelUploads': num_parallel_uploads,
+            'Tags': tags,
+            'Retention': retention,
+            'LegalHold': legal_hold,
+            'EndPoint' : minio_init[0],
+            'AccessKey': minio_init[1],
+            'SecretKey': minio_init[2],
+            'SessionToken': minio_init[3],
+            'Secure' : minio_init[4],
+            'Region' : minio_init[5],
+            'HttpClient' : minio_init[6],
+            'Credential' : minio_init[7]
+        })
+        print(result)
+        result = result.json()
+        print("successfully post backup")
+
+
     def local_download(self, bucket_name, object_name) -> bool:
         if not self.manager_url or not self.storage_path:
             return False
         try:
             result = requests.post(self.manager_url + "/download", json={'STORAGE_PATH':self.storage_path,'Bucket': bucket_name, 'Object': object_name})
             result = result.json()
+            print("successfully post download")
             if 'Result' in result.keys():
                 return result['Result']
         except:
+            print("unsuccessfully post download")
             return False
         return False
 
@@ -34,48 +72,58 @@ class Manager:
                     content_type="application/octet-stream",
                     metadata=None, sse=None, progress=None,
                     part_size=0, num_parallel_uploads=3,
-                    tags=None, retention=None, legal_hold=False) -> bool:
+                    tags=None, retention=None, legal_hold=False, minio_init=[]) -> bool:
         if not self.manager_url or not self.storage_path:
             return False
-        try:
-            print("trying to post manager to upload")
-            result = requests.post(self.manager_url + "/upload", json={
-                'Bucket': bucket_name,
-                'Object': object_name,
-                'FilePath': file_path,
-                'ContentType': content_type,
-                'Metadata': metadata,
-                'SSE': sse,
-                'Progress': progress,
-                'PartSize': part_size,
-                'NumParallelUploads': num_parallel_uploads,
-                'Tags': tags,
-                'Retention': retention,
-                'LegalHold': legal_hold
-            })
-            print("successfully post and result is :" , result['Result'])
-            result = result.json()
-            if 'Result' in result.keys():
-                return result['Result']
-        except:
-            print("unsuccessfully post")
-            return False
+        #try:
+        print("trying to post manager to upload")
+        result = requests.post(self.manager_url + "/upload", json={
+            'Bucket': bucket_name,
+            'Object': object_name,
+            'FilePath': file_path,
+            'ContentType': content_type,
+            'Metadata': metadata,
+            'SSE': sse,
+            'Progress': progress,
+            'PartSize': part_size,
+            'NumParallelUploads': num_parallel_uploads,
+            'Tags': tags,
+            'Retention': retention,
+            'LegalHold': legal_hold,
+            'EndPoint' : minio_init[0],
+            'AccessKey': minio_init[1],
+            'SecretKey': minio_init[2],
+            'SessionToken': minio_init[3],
+            'Secure' : minio_init[4],
+            'Region' : minio_init[5],
+            'HttpClient' : minio_init[6],
+            'Credential' : minio_init[7]
+        })
+        print(result)
+        result = result.json()
+        print("successfully post upload")
+        
+        if 'Result' in result.keys():
+            return result['Result']
+        #except:
+        #    print("unsuccessfully post")
+        #    return False
         return False
     
-    def init_database(self, endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials):
-        print("trying init minio")
-        result = requests.post(self.manager_url + "/init", json={
-                'Endpoint': endpoint,
-                'AccessKey': access_key,
-                'SecretKey': secret_key,
-                'SessionToken': session_token,
-                'Secure': secure,
-                'Region': region,
-                'HttpClient': http_client,
-                'Credentials': credentials,
-            })
-        #print("successfully init")
-        return True
+    # def init_database(self, endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials):
+    #     print("trying init minio")
+    #     result = requests.post(self.manager_url + "/init", json={
+    #             'Endpoint': endpoint,
+    #             'AccessKey': access_key,
+    #             'SecretKey': secret_key,
+    #             'SessionToken': session_token,
+    #             'Secure': secure,
+    #             'Region': region,
+    #             'HttpClient': http_client,
+    #             'Credentials': credentials,
+    #         })
+    #     print("successfully init")
+    #     return True
     
     def get_local_path(self, bucket_name, object_name) -> str:
         return os.path.join(self.storage_path, bucket_name, object_name)
@@ -83,7 +131,7 @@ class Manager:
 
 class MinioWrapper(Minio):
     """ Inheritted Wrapper """
-
+    minio_init = []
     def __init__(self, endpoint, access_key=None,
                  secret_key=None,
                  session_token=None,
@@ -94,14 +142,15 @@ class MinioWrapper(Minio):
         super().__init__(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
 
         self.manager = Manager()
-        self.manager.init_database(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
+        #self.manager.init_database(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
+        self.minio_init = [endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials]
 
     def fput_object(self, bucket_name, object_name, file_path,
                     content_type="application/octet-stream",
                     metadata=None, sse=None, progress=None,
                     part_size=0, num_parallel_uploads=3,
                     tags=None, retention=None, legal_hold=False):
-        if self.manager.local_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold):
+        if self.manager.local_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold, self.minio_init):
             # delete remote
             try:
                 stat = super().stat_object(bucket_name, object_name)
@@ -114,6 +163,7 @@ class MinioWrapper(Minio):
                 os.makedirs(os.path.dirname(dst))
             print("upload to local")
             shutil.copy(file_path, dst)
+            self.manager.backup(bucket_name, object_name, dst, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold, self.minio_init)
            
         else:
             # delete local
