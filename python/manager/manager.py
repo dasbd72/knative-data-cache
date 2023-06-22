@@ -4,92 +4,38 @@ import json
 import threading
 import uuid
 from flask import Flask, request, make_response
-from kubernetes import client, config
+# from kubernetes import client, config
 from minio import Minio
 from minio.datatypes import Object
 
+dbg = False
 app = Flask(__name__)
 databaseClient = None
 
 
-
+# usage: define an upload function for manager to fork a new thread to upload
+# input for data storage: bucket_name, object_name, file_path
+# input for minio init : content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold, endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials
+# output: None
 def parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold,
     endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials):
-    print(1)
     databaseClient = Minio(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
-    print(2)
     databaseClient.fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
-    print("successfully upload to remote by manager")
+    if(dbg):print("successfully upload parallelly to remote by manager")
 
-def get_host_volume_usage(directory):
-    # Get disk usage statistics of the specified directory on the host
-    usage = shutil.disk_usage(directory)
-
-    # Convert the usage values to human-readable format
-    total_size = usage.total / (1024 ** 2)  # Total size in GB
-    used_size = usage.used / (1024 ** 2)    # Used size in GB
-    free_size = usage.free / (1024 ** 2)    # Free size in GB
-
-    # Return the disk usage statistics
-    return {
-        'total_size': total_size,
-        'used_size': used_size,
-        'free_size': free_size
-    }
-
-
-def get_mem_usage(v1, nodeName):
-    nodes = v1.list_node().items
-    memory_capacity = None
-    memory_allocatable = None
-
-    for node in nodes:
-        # node_name = node.metadata.name
-        # if(node_name==nodeName):
-        print(node.metadata.name)
-        memory_capacity = node.status.capacity["memory"]
-        memory_allocatable = node.status.allocatable["memory"]
-    return memory_allocatable, memory_capacity
-
-
-def get_pv_usage(v1, pvName):
-    pv_list = v1.list_persistent_volume()
-    storage_capacity = None
-    storage_usage = None
-
-    for pv in pv_list.items:
-        pv_name = pv.metadata.name
-
-        if (pv_name == pvName):
-            storage_capacity = pv.spec.capacity["storage"]
-            # storage_usage = pv.status.capacity["storage"]
-
-    return storage_usage, storage_capacity
-
-# @app.route('/init', methods=['POST'])
-# def init():
-#     global databaseClient
-#     data = request.data.decode("utf-8")
-#     data = json.loads(data)
-#     endpoint = data['Endpoint']
-#     access_key = data['AccessKey']
-#     secret_key = data['SecretKey']
-#     session_token = data['SessionToken']
-#     secure = data['Secure']
-#     region1 = data['Region']
-#     http_client = data['HttpClient']
-#     credentials = data['Credentials']
-#     databaseClient = Minio(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
-
+# usage: check current shared directory to tell whether targer file is stored locally
+# input: Bucket and Object
+# output: True or False
 @app.route('/download', methods=['POST'])
 def handle_download_request():
     data = request.data.decode("utf-8")
     data = json.loads(data)
-    storage_path = data['STORAGE_PATH'].rstrip("/")
+    #storage_path = data['STORAGE_PATH'].rstrip("/")
     bucket_name = data['Bucket'].rstrip("/")
     object_name = data['Object'].rstrip("/")
-
-    dst = os.path.join(storage_path, bucket_name, object_name)
+    
+    # "shared" should replace by global var
+    dst = os.path.join("shared", bucket_name, object_name)
     result = False
     if os.path.exists(dst):
         result = True
@@ -101,35 +47,38 @@ def handle_download_request():
     response.headers["Ce-Source"] = "test-manager"
     return response
 
-
+# usage: upload file to local. if local storage is full, delete not use file by FIFO
+# input: Bucket and Object
+# output: True or False(only when encounter error)
+# TODO: stateful stack structure 
 @app.route('/upload', methods=['POST'])
 def handle_upload_request():
     data = request.data.decode("utf-8")
     data = json.loads(data)    
-    config.load_incluster_config()
-    v1 = client.CoreV1Api()
+    # config.load_incluster_config()
+    # v1 = client.CoreV1Api()
 
-    memory_allocatable, memory_capacity = get_mem_usage(v1, "")
-    storage_usage, storage_capacity = get_pv_usage(v1, "shared-volume")
-    directory_path = '/shared'
+    # memory_allocatable, memory_capacity = get_mem_usage(v1, "")
+    # storage_usage, storage_capacity = get_pv_usage(v1, "shared-volume")
+    # directory_path = '/shared'
 
-    # Call the function to get the host volume usage
-    volume_usage = get_host_volume_usage(directory_path)
+    # # Call the function to get the host volume usage
+    # volume_usage = get_host_volume_usage(directory_path)
 
-    # Print the results
-    print(storage_capacity, storage_usage)
-    print(memory_capacity, memory_allocatable)
-    print(f"Total Size: {volume_usage['total_size']:.5f} MB")
-    print(f"Used Size: {volume_usage['used_size']:.5f} MB")
-    print(f"Free Size: {volume_usage['free_size']:.5f} MB")
+    # # Print the results
+    # print(storage_capacity, storage_usage)
+    # print(memory_capacity, memory_allocatable)
+    # print(f"Total Size: {volume_usage['total_size']:.5f} MB")
+    # print(f"Used Size: {volume_usage['used_size']:.5f} MB")
+    # print(f"Free Size: {volume_usage['free_size']:.5f} MB")
 
-    mem_cap = int(memory_capacity[0:-2])
-    mem_aloc = int(memory_allocatable[0:-2])
+    # mem_cap = int(memory_capacity[0:-2])
+    # mem_aloc = int(memory_allocatable[0:-2])
 
-    result = False
-    if (mem_aloc/mem_cap > 0.2 and volume_usage['free_size'] > 50):
-        result = True
-     
+    # result = False
+    # if (mem_aloc/mem_cap > 0.2 and volume_usage['free_size'] > 50):
+    #     result = True
+    result = True
     response = make_response({"Result": result})
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())
@@ -137,6 +86,10 @@ def handle_upload_request():
     response.headers["Ce-Source"] = "test-manager"
     return response
 
+# usage: backup file in remote storage parallelly
+# input for data storage: bucket_name, object_name, file_path
+# input for minio init : content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold, endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials
+# output: True or False(only when encounter error)
 @app.route('/backup', methods=['POST'])
 def handle_backup_request():
     data = request.data.decode("utf-8")
@@ -163,7 +116,7 @@ def handle_backup_request():
     http_client =data['HttpClient']
     credentials = data['Credential']
     
-    print("trying parallel_upload")
+    if(dbg):print("trying parallel_upload")
     thread = threading.Thread(target=parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold,
     endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials))
     thread.start()
@@ -179,3 +132,64 @@ def handle_backup_request():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
+
+
+# def get_host_volume_usage(directory):
+#     # Get disk usage statistics of the specified directory on the host
+#     usage = shutil.disk_usage(directory)
+
+#     # Convert the usage values to human-readable format
+#     total_size = usage.total / (1024 ** 2)  # Total size in GB
+#     used_size = usage.used / (1024 ** 2)    # Used size in GB
+#     free_size = usage.free / (1024 ** 2)    # Free size in GB
+
+#     # Return the disk usage statistics
+#     return {
+#         'total_size': total_size,
+#         'used_size': used_size,
+#         'free_size': free_size
+#     }
+
+
+# def get_mem_usage(v1, nodeName):
+#     nodes = v1.list_node().items
+#     memory_capacity = None
+#     memory_allocatable = None
+
+#     for node in nodes:
+#         # node_name = node.metadata.name
+#         # if(node_name==nodeName):
+#         print(node.metadata.name)
+#         memory_capacity = node.status.capacity["memory"]
+#         memory_allocatable = node.status.allocatable["memory"]
+#     return memory_allocatable, memory_capacity
+
+
+# def get_pv_usage(v1, pvName):
+#     pv_list = v1.list_persistent_volume()
+#     storage_capacity = None
+#     storage_usage = None
+
+#     for pv in pv_list.items:
+#         pv_name = pv.metadata.name
+
+#         if (pv_name == pvName):
+#             storage_capacity = pv.spec.capacity["storage"]
+#             # storage_usage = pv.status.capacity["storage"]
+
+#     return storage_usage, storage_capacity
+
+# @app.route('/init', methods=['POST'])
+# def init():
+#     global databaseClient
+#     data = request.data.decode("utf-8")
+#     data = json.loads(data)
+#     endpoint = data['Endpoint']
+#     access_key = data['AccessKey']
+#     secret_key = data['SecretKey']
+#     session_token = data['SessionToken']
+#     secure = data['Secure']
+#     region1 = data['Region']
+#     http_client = data['HttpClient']
+#     credentials = data['Credentials']
+#     databaseClient = Minio(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
