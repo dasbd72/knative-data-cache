@@ -9,11 +9,9 @@ spec:
         - image: docker.io/johnson684/image-scale:python
           name: image-scale
           volumeMounts:
-            - mountPath: /shared
-              name: shared-volume
+            - name: shared-volume
+              mountPath: /shared
           env:
-            - name: MANAGER_URL
-              value: tmp_manager_url
             - name: STORAGE_PATH
               value: /shared
       volumes:
@@ -32,11 +30,9 @@ spec:
         - image: docker.io/johnson684/image-recognition:python
           name: image-recognition
           volumeMounts:
-            - mountPath: /shared
-              name: shared-volume
+            - name: shared-volume
+              mountPath: /shared
           env:
-            - name: MANAGER_URL
-              value: tmp_manager_url
             - name: STORAGE_PATH
               value: /shared
       volumes:

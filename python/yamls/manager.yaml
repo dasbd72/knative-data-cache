@@ -1,11 +1,11 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
-  name: manager-deployment
+  name: manager-daemonset
+  namespace: kube-system
   labels:
     app.kubernetes.io/name: manager
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: manager
@@ -14,9 +14,19 @@ spec:
       labels:
         app: manager
     spec:
+      tolerations:
+        # these tolerations are to have the daemonset runnable on control plane nodes
+        # remove them if your control plane nodes should not run pods
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
       containers:
         - name: manager-container
           image: johnson684/mana:python
+          imagePullPolicy: Always
           resources:
             requests:
               cpu: 30m
@@ -26,24 +36,18 @@ spec:
               memory: 400Mi
           ports:
             - containerPort: 8080
+              hostPort: 8080
           volumeMounts:
-            - mountPath: /shared
-              name: shared-volume
+            - name: shared-volume
+              mountPath: /shared
+          env:
+            - name: STORAGE_PATH
+              value: /shared
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
       volumes:
         - name: shared-volume
-          persistentVolumeClaim:
-            claimName: shared-volume-claim
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: manager
-  name: manager
-spec:
-  ports:
-    - name: http-manager
-      port: 8080
-      targetPort: 8080
-  selector:
-    app: manager
+          hostPath:
+            path: "/dev/shm"

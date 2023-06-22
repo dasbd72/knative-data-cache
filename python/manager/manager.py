@@ -4,36 +4,44 @@ import json
 import threading
 import uuid
 from flask import Flask, request, make_response
-# from kubernetes import client, config
+from kubernetes import client, config
 from minio import Minio
-from minio.datatypes import Object
 
 dbg = False
 app = Flask(__name__)
 databaseClient = None
+storage_path = ""
 
 
-# usage: define an upload function for manager to fork a new thread to upload
-# input for data storage: bucket_name, object_name, file_path
-# input for minio init : content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold, endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials
-# output: None
 def parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold,
-    endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials):
+                    endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials):
+    """
+    usage: define an upload function for manager to fork a new thread to upload
+    input for data storage: bucket_name, object_name, file_path
+    input for minio init : content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold, endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials
+    output: None
+    """
+
     databaseClient = Minio(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
     databaseClient.fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
-    if(dbg):print("successfully upload parallelly to remote by manager")
+    if (dbg):
+        print("successfully upload parallelly to remote by manager")
 
-# usage: check current shared directory to tell whether targer file is stored locally
-# input: Bucket and Object
-# output: True or False
+
 @app.route('/download', methods=['POST'])
 def handle_download_request():
+    """
+    usage: check current shared directory to tell whether targer file is stored locally
+    input: Bucket and Object
+    output: True or False
+    """
+
     data = request.data.decode("utf-8")
     data = json.loads(data)
-    #storage_path = data['STORAGE_PATH'].rstrip("/")
+    # storage_path = data['STORAGE_PATH'].rstrip("/")
     bucket_name = data['Bucket'].rstrip("/")
     object_name = data['Object'].rstrip("/")
-    
+
     # "shared" should replace by global var
     dst = os.path.join("shared", bucket_name, object_name)
     result = False
@@ -47,14 +55,18 @@ def handle_download_request():
     response.headers["Ce-Source"] = "test-manager"
     return response
 
-# usage: upload file to local. if local storage is full, delete not use file by FIFO
-# input: Bucket and Object
-# output: True or False(only when encounter error)
-# TODO: stateful stack structure 
+
 @app.route('/upload', methods=['POST'])
 def handle_upload_request():
+    """
+    usage: upload file to local. if local storage is full, delete not use file by FIFO
+    input: Bucket and Object
+    output: True or False(only when encounter error)
+    TODO: stateful stack structure
+    """
+
     data = request.data.decode("utf-8")
-    data = json.loads(data)    
+    data = json.loads(data)
     # config.load_incluster_config()
     # v1 = client.CoreV1Api()
 
@@ -86,12 +98,16 @@ def handle_upload_request():
     response.headers["Ce-Source"] = "test-manager"
     return response
 
-# usage: backup file in remote storage parallelly
-# input for data storage: bucket_name, object_name, file_path
-# input for minio init : content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold, endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials
-# output: True or False(only when encounter error)
+
 @app.route('/backup', methods=['POST'])
 def handle_backup_request():
+    """
+    usage: backup file in remote storage parallelly
+    input for data storage: bucket_name, object_name, file_path
+    input for minio init : content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold, endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials
+    output: True or False(only when encounter error)
+    """
+
     data = request.data.decode("utf-8")
     data = json.loads(data)
     bucket_name = data['Bucket'].rstrip("/")
@@ -113,14 +129,15 @@ def handle_backup_request():
     session_token = data['SessionToken']
     secure = data['Secure']
     region = data['Region']
-    http_client =data['HttpClient']
+    http_client = data['HttpClient']
     credentials = data['Credential']
-    
-    if(dbg):print("trying parallel_upload")
+
+    if (dbg):
+        print("trying parallel_upload")
     thread = threading.Thread(target=parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold,
-    endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials))
+                                                     endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials))
     thread.start()
-     
+
     response = make_response({"Result": True})
 
     response.headers["Content-Type"] = "application/json"
@@ -131,6 +148,17 @@ def handle_backup_request():
 
 
 if __name__ == '__main__':
+    if "STORAGE_PATH" in os.environ.keys():
+        storage_path = os.environ["STORAGE_PATH"]
+        print(f"STORAGE_PATH: {storage_path}")
+
+        # write host ip to file
+        host_ip = os.environ["HOST_IP"]
+        print(f"HOST_IP: {host_ip}")
+        with open(os.path.join(storage_path, "MANAGER_URL"), "w") as f:
+            f.write(f"http://{host_ip}:8080")
+    else:
+        storage_path = None
     app.run(debug=True, host='0.0.0.0', port=8080)
 
 
