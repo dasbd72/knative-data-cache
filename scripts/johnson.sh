@@ -17,6 +17,11 @@ docker build -t johnson684/mana:python .
 docker push johnson684/mana:python
 cd ..
 
+cd manager-go
+docker build -t johnson684/mana:golang .
+docker push johnson684/mana:golang
+cd ..
+
 cd image-scale
 docker build -t image-scale .
 docker tag image-scale:latest johnson684/image-scale:python

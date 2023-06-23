@@ -25,8 +25,8 @@ spec:
           effect: NoSchedule
       containers:
         - name: manager-container
-          image: johnson684/mana:python
-          imagePullPolicy: Always
+          image: johnson684/mana:golang
+          # imagePullPolicy: Always
           resources:
             requests:
               cpu: 30m
@@ -36,7 +36,7 @@ spec:
               memory: 400Mi
           ports:
             - containerPort: 8080
-              hostPort: 8080
+              hostPort: 12345
           volumeMounts:
             - name: shared-volume
               mountPath: /shared

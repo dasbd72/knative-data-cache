@@ -7,6 +7,7 @@ spec:
     spec:
       containers:
         - image: docker.io/johnson684/image-scale:python
+          # imagePullPolicy: Always
           name: image-scale
           volumeMounts:
             - name: shared-volume
@@ -28,6 +29,7 @@ spec:
     spec:
       containers:
         - image: docker.io/johnson684/image-recognition:python
+          # imagePullPolicy: Always
           name: image-recognition
           volumeMounts:
             - name: shared-volume
