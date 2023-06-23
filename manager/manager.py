@@ -134,8 +134,7 @@ def handle_backup_request():
 
     if (dbg):
         print("trying parallel_upload")
-    thread = threading.Thread(target=parallel_upload(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold,
-                                                     endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials))
+    thread = threading.Thread(target=parallel_upload, args=(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold, endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials), daemon=True)
     thread.start()
 
     response = make_response({"Result": True})
