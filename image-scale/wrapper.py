@@ -5,7 +5,7 @@ from minio import Minio
 from minio.datatypes import Object as MinioObject
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")))
 
 
 class Manager:
