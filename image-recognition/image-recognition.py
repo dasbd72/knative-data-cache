@@ -82,8 +82,12 @@ def imageRecognition():
     data = request.data.decode("utf-8")
     data = json.loads(data)
 
-    bucket_name = data['Bucket'].rstrip("/")
-    download_path = data['Source'].rstrip("/") + "/"
+    bucket_name = data['bucket'].rstrip("/")
+    download_path = data['source'].rstrip("/") + "/"
+    if 'force_remote' in data:
+        force_remote = data['force_remote']
+    else:
+        force_remote = False
     local_path = './storage/'
 
     # remove exist storage and create
@@ -95,7 +99,8 @@ def imageRecognition():
         endpoint,
         access_key=access_key,
         secret_key=secret_key,
-        secure=False
+        secure=False,
+        force_remote=force_remote
     )
     print(f"Connected to {endpoint}")
 

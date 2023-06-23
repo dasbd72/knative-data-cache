@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: manager-daemonset
-  namespace: kube-system
   labels:
     app.kubernetes.io/name: manager
 spec:

@@ -123,17 +123,20 @@ class MinioWrapper(Minio):
                  secure=True,
                  region=None,
                  http_client=None,
-                 credentials=None):
+                 credentials=None,
+                 force_remote=False):
         super().__init__(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
 
-        self.manager = Manager(endpoint, access_key, secret_key, session_token, secure, region)
+        self.force_remote = force_remote
+        if not self.force_remote:
+            self.manager = Manager(endpoint, access_key, secret_key, session_token, secure, region)
 
     def fput_object(self, bucket_name, object_name, file_path,
                     content_type="application/octet-stream",
                     metadata=None, sse=None, progress=None,
                     part_size=0, num_parallel_uploads=3,
                     tags=None, retention=None, legal_hold=False):
-        if self.manager.local_upload(bucket_name, object_name, file_path, content_type):
+        if not self.force_remote and self.manager.exist and self.manager.local_upload(bucket_name, object_name, file_path, content_type):
             # copy to local
             dst = self.manager.get_local_path(bucket_name, object_name)
             if not os.path.exists(os.path.dirname(dst)):
@@ -153,7 +156,7 @@ class MinioWrapper(Minio):
     def fget_object(self, bucket_name, object_name, file_path,
                     request_headers=None, ssec=None, version_id=None,
                     extra_query_params=None, tmp_file_path=None, progress=None):
-        if self.manager.local_download(bucket_name, object_name):
+        if not self.force_remote and self.manager.exist and self.manager.local_download(bucket_name, object_name):
             logging.info("copy from local")
             src = self.manager.get_local_path(bucket_name, object_name)
             shutil.copy(src, file_path)
@@ -173,7 +176,7 @@ class MinioWrapper(Minio):
             object_set.add(obj.object_name)
             yield obj
 
-        if self.manager.storage_path:
+        if not self.force_remote and self.manager.exist:
             if os.path.exists(os.path.join(self.manager.storage_path, bucket_name, prefix)):
                 bucket_dir = os.path.join(self.manager.storage_path, bucket_name)
                 if prefix.endswith("/"):
