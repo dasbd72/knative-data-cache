@@ -13,7 +13,7 @@ cd ..
 # deploy to k8s
 kubectl apply -f yamls/manager.yaml
 
-kubectl port-forward services/manager 12345:8080
+kubectl port-forward $(kubectl get pods -l "app=manager" -o jsonpath="{.items[0].metadata.name}") 12345:8080
 
 # manager-go
 # /
