@@ -4,6 +4,7 @@ import requests
 from minio import Minio
 from minio.datatypes import Object as MinioObject
 import logging
+import time
 
 logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")))
 
@@ -128,15 +129,23 @@ class MinioWrapper(Minio):
         super().__init__(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
 
         self.force_remote = force_remote
-        if not self.force_remote:
-            self.manager = Manager(endpoint, access_key, secret_key, session_token, secure, region)
+        self.manager = Manager(endpoint, access_key, secret_key, session_token, secure, region)
+        if self.force_remote:
+            self.manager.exist = False
+
+        self.upload_perf = 0
+        self.download_perf = 0
+        self.backup_perf = 0
 
     def fput_object(self, bucket_name, object_name, file_path,
                     content_type="application/octet-stream",
                     metadata=None, sse=None, progress=None,
                     part_size=0, num_parallel_uploads=3,
                     tags=None, retention=None, legal_hold=False):
-        if not self.force_remote and self.manager.exist and self.manager.local_upload(bucket_name, object_name, file_path, content_type):
+        start = time.perf_counter()
+        local_upload = self.manager.exist and self.manager.local_upload(bucket_name, object_name, file_path, content_type)
+        self.upload_perf += time.perf_counter() - start
+        if local_upload:
             # copy to local
             dst = self.manager.get_local_path(bucket_name, object_name)
             if not os.path.exists(os.path.dirname(dst)):
@@ -144,7 +153,9 @@ class MinioWrapper(Minio):
             logging.info("copy to local")
             shutil.copy(file_path, dst)
             # tell manager to backup
+            start = time.perf_counter()
             success = self.manager.backup(bucket_name, object_name, content_type)
+            self.backup_perf += time.perf_counter() - start
             if not success:
                 logging.error("post backup failed, fallback to upload")
                 super().fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
@@ -156,7 +167,10 @@ class MinioWrapper(Minio):
     def fget_object(self, bucket_name, object_name, file_path,
                     request_headers=None, ssec=None, version_id=None,
                     extra_query_params=None, tmp_file_path=None, progress=None):
-        if not self.force_remote and self.manager.exist and self.manager.local_download(bucket_name, object_name):
+        start = time.perf_counter()
+        local_download = self.manager.exist and self.manager.local_download(bucket_name, object_name)
+        self.download_perf += time.perf_counter() - start
+        if local_download:
             logging.info("copy from local")
             src = self.manager.get_local_path(bucket_name, object_name)
             shutil.copy(src, file_path)
@@ -194,3 +208,12 @@ class MinioWrapper(Minio):
                             yield MinioObject(bucket_name, filename)
 
     """ Increased Methods """
+
+    def get_upload_perf(self):
+        return self.upload_perf
+
+    def get_download_perf(self):
+        return self.download_perf
+
+    def get_backup_perf(self):
+        return self.backup_perf

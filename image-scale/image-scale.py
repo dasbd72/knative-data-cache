@@ -97,13 +97,18 @@ def imageRecognition():
 
     code_end_time = time.perf_counter()
     code_duration = code_end_time - code_start_time
-    print(f"Execution time: {code_duration}")
-    print(f"Download time: {download_duration}")
-    print(f"Scale time: {scale_duration}")
-    print(f"Upload time: {upload_duration}")
 
     # send response
-    response = make_response({})
+    response = make_response(json.dumps({
+        "force_remote": force_remote,
+        "code_duration": code_duration,
+        "download_duration": download_duration,
+        "scale_duration": scale_duration,
+        "upload_duration": upload_duration,
+        "download_post_duration": minio_client.get_download_perf(),
+        "upload_post_duration": minio_client.get_upload_perf(),
+        "backup_post_duration": minio_client.get_backup_perf()
+    }))
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())
     response.headers["Ce-specversion"] = "0.3"

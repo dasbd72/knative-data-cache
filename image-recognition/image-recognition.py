@@ -88,6 +88,10 @@ def imageRecognition():
         force_remote = data['force_remote']
     else:
         force_remote = False
+    if 'short_result' in data:
+        short_result = data['short_result']
+    else:
+        short_result = False
     local_path = './storage/'
 
     # remove exist storage and create
@@ -110,18 +114,25 @@ def imageRecognition():
     download_duration = download_end_time - download_start_time
 
     inference_start_time = time.perf_counter()
-    inference_end_time = time.perf_counter()
     pred_lst = inference(local_path)
+    inference_end_time = time.perf_counter()
     inference_duration = inference_end_time - inference_start_time
 
     code_end_time = time.perf_counter()
     code_duration = code_end_time - code_start_time
-    print(f"Execution time: {code_duration}")
-    print(f"Download time: {download_duration}")
-    print(f"Inference time: {inference_duration}")
 
     # send response
-    response = make_response(json.dumps(pred_lst))
+    if short_result:
+        pred_lst = pred_lst[:5]
+    response = make_response(json.dumps({
+        "predictions": pred_lst,
+        "force_remote": force_remote,
+        "short_result": short_result,
+        "code_duration": code_duration,
+        "download_duration": download_duration,
+        "inference_duration": inference_duration,
+        "download_post_duration": minio_client.get_download_perf()
+    }))
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())
     response.headers["Ce-specversion"] = "0.3"
