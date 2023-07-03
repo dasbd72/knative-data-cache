@@ -54,6 +54,9 @@ def uploadImages(minio_client: Minio, bucket_name, local_path, remote_path):
 
 
 def inference(local_path):
+    time.sleep(1)
+    return []
+
     #  model
     model.eval()
     preprocess = transforms.Compose([
