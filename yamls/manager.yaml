@@ -25,7 +25,7 @@ spec:
       containers:
         - name: manager-container
           image: johnson684/mana:golang
-          # imagePullPolicy: Always
+          imagePullPolicy: Always
           resources:
             requests:
               cpu: 30m

@@ -56,6 +56,7 @@ class Manager:
         if not self.manager_url or not self.storage_path:
             return False
         try:
+            print("!")
             result = requests.post(self.manager_url + "/download", json={
                 'endpoint': self.endpoint,
                 'bucket': bucket_name,
