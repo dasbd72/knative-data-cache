@@ -53,24 +53,27 @@ class Manager:
             logging.info(f"post create result {self.exist}")
 
     def local_download(self, bucket_name, object_name) -> bool:
-        if not self.manager_url or not self.storage_path:
+        if not self.storage_path:
             return False
         try:
-            result = requests.post(self.manager_url + "/download", json={
-                'endpoint': self.endpoint,
-                'bucket': bucket_name,
-                'object': object_name
-            })
+            #result = requests.post(self.manager_url + "/download", json={
+                #'endpoint': self.endpoint,
+                #'bucket': bucket_name,
+                #'object': object_name
+            #})
+            dst = os.path.join(self.storage_path, bucket_name, object_name)
+            result = os.path.exists(dst)
+            return result
         except:
-            logging.error("unsuccessfully post download")
+            logging.error("unsuccessfully check download path")
             return False
-        else:
-            logging.info("successfully post download")
-            result = result.json()
-            if 'result' in result.keys():
-                return result['result']
-            else:
-                return False
+        # else:
+        #     logging.info("successfully post download")
+        #     result = result.json()
+        #     if 'result' in result.keys():
+        #         return result['result']
+        #     else:
+        #         return False
 
     def local_upload(self, bucket_name, object_name, file_path,
                      content_type="application/octet-stream") -> bool:
