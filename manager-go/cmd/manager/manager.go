@@ -1,15 +1,26 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"log"
-	"net/http"
+	"net"
 	"os"
 	"strings"
 
 	"github.com/dasbd72/images-processing-benchmarks/manager-go/pkg/minioclients"
 	"github.com/dasbd72/images-processing-benchmarks/manager-go/pkg/utils"
 )
+
+type Request struct {
+	Type string `json:"type"`
+	Body string `json:"body"`
+}
+
+type Response struct {
+	Success bool   `json:"success"`
+	Body    string `json:"body"`
+}
 
 var (
 	storagePath string
@@ -23,12 +34,13 @@ func init() {
 
 	// read host ip from environment variable
 	hostIP = os.Getenv("HOST_IP")
-	// write manager url to storage
-	f, err := os.Create(storagePath + "/MANAGER_URL")
+	// write manager ip to storage
+	f, err := os.Create(storagePath + "/MANAGER_IP")
 	if err != nil {
 		panic(err)
 	}
-	f.WriteString("http://" + hostIP + ":12345")
+	log.Println("HOST IP: " + hostIP)
+	f.WriteString(hostIP)
 	f.Close()
 
 	// initialize minioclients
@@ -36,31 +48,57 @@ func init() {
 }
 
 func main() {
-	http.HandleFunc("/", handle_root)
-	http.HandleFunc("/create", handle_create)
-	http.HandleFunc("/download", handle_download)
-	http.HandleFunc("/upload", handle_upload)
-	http.HandleFunc("/backup", handle_backup)
+	listener, err := net.Listen("tcp", ":12345")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer listener.Close()
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
+	log.Println("Manager is running on " + hostIP + ":12345")
 
-func handle_root(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	var res struct {
-		Result string `json:"result"`
+		go handle_connection(conn)
 	}
 
-	res.Result = "This is manager."
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
 }
 
-func handle_create(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+func handle_connection(conn net.Conn) {
+	reader := bufio.NewReader(conn)
+	for {
+		var req Request
+		var res Response
+		// Read the request
+		err := json.NewDecoder(reader).Decode(&req)
+		if err != nil {
+			log.Println(err)
+			break
+		}
 
+		log.Printf("Request: %v\n", req)
+
+		// Handle the request
+		switch req.Type {
+		case "create":
+			handle_create(req, &res)
+		case "download":
+			handle_download(req, &res)
+		case "upload":
+			handle_upload(req, &res)
+		case "backup":
+			handle_backup(req, &res)
+		}
+
+		// Write the response
+		json.NewEncoder(conn).Encode(res)
+	}
+}
+
+func handle_create(request Request, response *Response) {
 	var req struct {
 		Endpoint        string `json:"endpoint"`
 		AccessKeyID     string `json:"accessKey"`
@@ -74,29 +112,27 @@ func handle_create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the request
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.Unmarshal([]byte(request.Body), &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		response.Success = false
 		return
 	}
 
 	// Add the client
 	err = mcs.AddClient(req.Endpoint, req.AccessKeyID, req.SecretAccessKey, req.SessionToken, req.UseSSL, req.Region)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		response.Success = false
 		return
 	}
 
 	// Return success
+	response.Success = true
 	res.Result = true
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	b, _ := json.Marshal(res)
+	response.Body = string(b)
 }
 
-func handle_download(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
+func handle_download(request Request, response *Response) {
 	var req struct {
 		Endpoint string `json:"endpoint"`
 		Bucket   string `json:"bucket"`
@@ -107,9 +143,9 @@ func handle_download(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the request
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.Unmarshal([]byte(request.Body), &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		response.Success = false
 		return
 	}
 
@@ -123,7 +159,7 @@ func handle_download(w http.ResponseWriter, r *http.Request) {
 	// Check if file exists in storage
 	exist, err := utils.FileExist(utils.GetLocalPath(storagePath, req.Endpoint, req.Bucket, req.Object))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		response.Success = false
 		return
 	}
 
@@ -135,13 +171,13 @@ func handle_download(w http.ResponseWriter, r *http.Request) {
 		res.Result = false
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	// Return success
+	response.Success = true
+	b, _ := json.Marshal(res)
+	response.Body = string(b)
 }
 
-func handle_upload(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
+func handle_upload(request Request, response *Response) {
 	var req struct {
 		Endpoint string `json:"endpoint"`
 		Bucket   string `json:"bucket"`
@@ -152,9 +188,9 @@ func handle_upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the request
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.Unmarshal([]byte(request.Body), &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		response.Success = false
 		return
 	}
 
@@ -170,17 +206,17 @@ func handle_upload(w http.ResponseWriter, r *http.Request) {
 	if mcs.Exist(req.Endpoint) {
 		res.Result = true
 	} else {
-		http.Error(w, "Minio client not initialized.", http.StatusInternalServerError)
+		response.Success = false
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	// Return success
+	response.Success = true
+	b, _ := json.Marshal(res)
+	response.Body = string(b)
 }
 
-func handle_backup(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
+func handle_backup(request Request, response *Response) {
 	var req struct {
 		Endpoint    string `json:"endpoint"`
 		Bucket      string `json:"bucket"`
@@ -192,9 +228,9 @@ func handle_backup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the request
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.Unmarshal([]byte(request.Body), &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		response.Success = false
 		return
 	}
 
@@ -211,20 +247,23 @@ func handle_backup(w http.ResponseWriter, r *http.Request) {
 		localPath := utils.GetLocalPath(storagePath, req.Endpoint, req.Bucket, req.Object)
 		exist, err := utils.FileExist(localPath)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			response.Success = false
 			return
 		}
 		if !exist {
-			http.Error(w, "File not exist.", http.StatusInternalServerError)
+			response.Success = false
 			return
 		}
 		// upload to minio in background
 		go mcs.Upload(req.Endpoint, req.Bucket, req.Object, localPath, req.ContentType)
 	} else {
-		http.Error(w, "Minio client not initialized.", http.StatusInternalServerError)
+		response.Success = false
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	// Return success
+	response.Success = true
+	res.Result = true
+	b, _ := json.Marshal(res)
+	response.Body = string(b)
 }

@@ -6,9 +6,12 @@ docker push johnson684/mana:python
 cd ..
 
 cd manager-go
-docker build -t johnson684/mana:golang .
-docker push johnson684/mana:golang
+docker build -t johnson684/mana:golang-socket .
+docker push johnson684/mana:golang-socket
 cd ..
+
+# delete old manager
+kubectl delete -f yamls/manager.yaml
 
 # deploy to k8s
 kubectl apply -f yamls/manager.yaml
