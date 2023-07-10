@@ -65,7 +65,12 @@ def imageRecognition():
     else:
         force_remote = False
     local_path = './storage/'
-
+    # add
+    if 'force_backup' in data:
+        force_backup = data['force_backup']
+    else:
+        force_backup = False
+    # add
     # remove exist storage and create
     if os.path.exists(local_path):
         shutil.rmtree(local_path)
@@ -76,7 +81,8 @@ def imageRecognition():
         access_key=access_key,
         secret_key=secret_key,
         secure=False,
-        force_remote=force_remote
+        force_remote=force_remote,
+        force_backup=force_backup
     )
     print(f"Connected to {endpoint}")
 
@@ -101,6 +107,7 @@ def imageRecognition():
     # send response
     response = make_response(json.dumps({
         "force_remote": force_remote,
+        "force_backup": force_backup,
         "code_duration": code_duration,
         "download_duration": download_duration,
         "scale_duration": scale_duration,

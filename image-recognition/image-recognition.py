@@ -54,6 +54,8 @@ def uploadImages(minio_client: Minio, bucket_name, local_path, remote_path):
 
 
 def inference(local_path):
+    time.sleep(1)
+    return []
     #  model
     model.eval()
     preprocess = transforms.Compose([
@@ -88,6 +90,10 @@ def imageRecognition():
         force_remote = data['force_remote']
     else:
         force_remote = False
+    if 'force_backup' in data:
+        force_backup = data['force_backup']
+    else:
+        force_backup = False
     if 'short_result' in data:
         short_result = data['short_result']
     else:
@@ -104,7 +110,8 @@ def imageRecognition():
         access_key=access_key,
         secret_key=secret_key,
         secure=False,
-        force_remote=force_remote
+        force_remote=force_remote,
+        force_backup=force_backup
     )
     print(f"Connected to {endpoint}")
 
@@ -127,6 +134,7 @@ def imageRecognition():
     response = make_response(json.dumps({
         "predictions": pred_lst,
         "force_remote": force_remote,
+        "force_backup": force_backup,
         "short_result": short_result,
         "code_duration": code_duration,
         "download_duration": download_duration,

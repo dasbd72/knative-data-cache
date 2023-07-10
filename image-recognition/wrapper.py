@@ -125,10 +125,12 @@ class MinioWrapper(Minio):
                  region=None,
                  http_client=None,
                  credentials=None,
-                 force_remote=False):
+                 force_remote=False,
+                 force_backup=False):
         super().__init__(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
 
         self.force_remote = force_remote
+        self.force_backup = force_backup
         self.manager = Manager(endpoint, access_key, secret_key, session_token, secure, region)
         if self.force_remote:
             self.manager.exist = False
@@ -153,12 +155,14 @@ class MinioWrapper(Minio):
             logging.info("copy to local")
             shutil.copy(file_path, dst)
             # tell manager to backup
-            start = time.perf_counter()
-            success = self.manager.backup(bucket_name, object_name, content_type)
-            self.backup_perf += time.perf_counter() - start
-            if not success:
-                logging.error("post backup failed, fallback to upload")
-                super().fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
+            if self.force_backup:
+                logging.info("force to backup")
+                start = time.perf_counter()
+                success = self.manager.backup(bucket_name, object_name, content_type)
+                self.backup_perf += time.perf_counter() - start
+                if not success:
+                    logging.error("post backup failed, fallback to upload")
+                    super().fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
         else:
             # upload
             logging.info("upload to remote")
