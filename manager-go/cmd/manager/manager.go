@@ -79,6 +79,8 @@ func handle_connection(conn net.Conn) {
 			break
 		}
 
+		log.Printf("Request: %v\n", req)
+
 		// Handle the request
 		switch req.Type {
 		case "create":

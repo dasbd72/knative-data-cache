@@ -15,6 +15,7 @@ class Manager:
     def __init__(self, endpoint) -> None:
         self.exist = False
         self.endpoint: str = endpoint
+        self.connection: socket.socket = None
 
         if "STORAGE_PATH" in os.environ.keys():
             self.storage_path = os.environ["STORAGE_PATH"]
@@ -33,28 +34,37 @@ class Manager:
             self.exist = True
         logging.info(f"MANAGER: {self.manager_ip}:{self.manager_port}")
 
-    def send_recv(self, data: str, bufsize: int = 128) -> str:
         try:
-            # Connect to socket
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((self.manager_ip, self.manager_port))
+            self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.connection.connect((self.manager_ip, self.manager_port))
+        except:
+            logging.error("connection failed")
+            self.exist = False
 
+    def close(self) -> None:
+        if self.connection is not None:
+            self.connection.close()
+
+    def send_recv(self, data: str, bufsize: int = 128) -> str:
+        if self.connection is None:
+            logging.error("connection is None")
+            return "{}"
+        try:
             # Send data
-            s.send(data.encode("utf-8"))
+            self.connection.send(data.encode("utf-8"))
 
             # Receive data
-            result = s.recv(bufsize).decode("utf-8")
-            s.close()
+            result = self.connection.recv(bufsize).decode("utf-8")
         except:
             logging.error("send_recv failed")
-            return None
+            return "{}"
         else:
             result = json.JSONDecoder().decode(result)
             if 'success' in result.keys() and result['success']:
                 return result['body']
             else:
-                return None
-        
+                return "{}"
+
     def create(self, endpoint, access_key=None, secret_key=None, session_token=None, secure=True, region=None):
         if not self.manager_ip or not self.storage_path:
             return False
@@ -248,6 +258,9 @@ class MinioWrapper(Minio):
                             yield MinioObject(bucket_name, filename)
 
     """ Increased Methods """
+
+    def close(self):
+        self.manager.close()
 
     def get_upload_perf(self):
         return self.upload_perf

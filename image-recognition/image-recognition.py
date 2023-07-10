@@ -121,6 +121,8 @@ def imageRecognition():
     inference_end_time = time.perf_counter()
     inference_duration = inference_end_time - inference_start_time
 
+    minio_client.close()
+
     code_end_time = time.perf_counter()
     code_duration = code_end_time - code_start_time
 

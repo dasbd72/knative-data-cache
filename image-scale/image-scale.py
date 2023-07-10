@@ -95,6 +95,8 @@ def imageRecognition():
     upload_end_time = time.perf_counter()
     upload_duration = upload_end_time - upload_start_time
 
+    minio_client.close()
+
     code_end_time = time.perf_counter()
     code_duration = code_end_time - code_start_time
 
