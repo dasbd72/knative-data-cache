@@ -5,16 +5,14 @@ from minio import Minio
 from minio.datatypes import Object as MinioObject
 import logging
 import time
+import socket
+import json
 
 logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")))
 
 
 class Manager:
-    def __init__(self, endpoint, access_key=None,
-                 secret_key=None,
-                 session_token=None,
-                 secure=True,
-                 region=None,) -> None:
+    def __init__(self, endpoint) -> None:
         self.exist = False
         self.endpoint: str = endpoint
 
@@ -24,16 +22,46 @@ class Manager:
             self.storage_path = None
         logging.info(f"STORAGE_PATH: {self.storage_path}")
 
-        if os.path.exists(os.path.join(self.storage_path, "MANAGER_URL")):
-            with open(os.path.join(self.storage_path, "MANAGER_URL"), "r") as f:
-                self.manager_url = f.read()
+        if os.path.exists(os.path.join(self.storage_path, "MANAGER_IP")):
+            with open(os.path.join(self.storage_path, "MANAGER_IP"), "r") as f:
+                self.manager_ip = f.read()
         else:
-            self.manager_url = None
-        logging.info(f"MANAGER_URL: {self.manager_url}")
+            self.manager_ip = None
+        self.manager_port = 12345
 
-        if self.manager_url:
-            try:
-                result = requests.post(self.manager_url + "/create", json={
+        if self.storage_path is not None and self.manager_ip is not None:
+            self.exist = True
+        logging.info(f"MANAGER: {self.manager_ip}:{self.manager_port}")
+
+    def send_recv(self, data: str, bufsize: int = 128) -> str:
+        try:
+            # Connect to socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((self.manager_ip, self.manager_port))
+
+            # Send data
+            s.send(data.encode("utf-8"))
+
+            # Receive data
+            result = s.recv(bufsize).decode("utf-8")
+            s.close()
+        except:
+            logging.error("send_recv failed")
+            return None
+        else:
+            result = json.JSONDecoder().decode(result)
+            if 'success' in result.keys() and result['success']:
+                return result['body']
+            else:
+                return None
+        
+    def create(self, endpoint, access_key=None, secret_key=None, session_token=None, secure=True, region=None):
+        if not self.manager_ip or not self.storage_path:
+            return False
+        try:
+            result = self.send_recv(json.JSONEncoder().encode({
+                'type': 'create',
+                'body': json.JSONEncoder().encode({
                     'endpoint': endpoint,
                     'accessKey': access_key,
                     'secretKey': secret_key,
@@ -41,32 +69,36 @@ class Manager:
                     'secure': secure,
                     'region': region,
                 })
-            except:
-                logging.error("unsuccessfully post create")
-                self.exist = False
+            }))
+        except:
+            logging.error("unsuccessfully send create")
+            self.exist = False
+        else:
+            logging.info("successfully send create")
+            result = json.JSONDecoder().decode(result)
+            if 'result' in result.keys():
+                self.exist = result['result']
             else:
-                result = result.json()
-                if 'result' in result.keys():
-                    self.exist = result['result']
-                else:
-                    self.exist = False
-            logging.info(f"post create result {self.exist}")
+                self.exist = False
 
     def local_download(self, bucket_name, object_name) -> bool:
-        if not self.manager_url or not self.storage_path:
+        if not self.manager_ip or not self.storage_path:
             return False
         try:
-            result = requests.post(self.manager_url + "/download", json={
-                'endpoint': self.endpoint,
-                'bucket': bucket_name,
-                'object': object_name
-            })
+            result = self.send_recv(json.JSONEncoder().encode({
+                'type': 'download',
+                'body': json.JSONEncoder().encode({
+                    'endpoint': self.endpoint,
+                    'bucket': bucket_name,
+                    'object': object_name
+                })
+            }))
         except:
-            logging.error("unsuccessfully post download")
+            logging.error("unsuccessfully send download")
             return False
         else:
-            logging.info("successfully post download")
-            result = result.json()
+            logging.info("successfully send download")
+            result = json.JSONDecoder().decode(result)
             if 'result' in result.keys():
                 return result['result']
             else:
@@ -74,41 +106,46 @@ class Manager:
 
     def local_upload(self, bucket_name, object_name, file_path,
                      content_type="application/octet-stream") -> bool:
-        if not self.manager_url or not self.storage_path:
+        if not self.manager_ip or not self.storage_path:
             return False
         try:
-            result = requests.post(self.manager_url + "/upload", json={
-                'endpoint': self.endpoint,
-                'bucket': bucket_name,
-                'object': object_name
-            })
+            result = self.send_recv(json.JSONEncoder().encode({
+                'type': 'upload',
+                'body': json.JSONEncoder().encode({
+                    'endpoint': self.endpoint,
+                    'bucket': bucket_name,
+                    'object': object_name
+                })
+            }))
         except:
-            logging.error("unsuccessfully post upload")
+            logging.error("unsuccessfully send upload")
             return False
         else:
-            result = result.json()
+            result = json.JSONDecoder().decode(result)
             if 'result' in result.keys():
                 return result['result']
             else:
                 return False
 
     def backup(self, bucket_name, object_name, content_type="application/octet-stream") -> bool:
-        if not self.manager_url or not self.storage_path:
+        if not self.manager_ip or not self.storage_path:
             return False
         try:
-            logging.info("trying to post backup")
-            result = requests.post(self.manager_url + "/backup", json={
-                'endpoint': self.endpoint,
-                'bucket': bucket_name,
-                'object': object_name,
-                'contentType': content_type,
-            })
+            result = self.send_recv(json.JSONEncoder().encode({
+                'type': 'backup',
+                'body': json.JSONEncoder().encode({
+                    'endpoint': self.endpoint,
+                    'bucket': bucket_name,
+                    'object': object_name,
+                    'contentType': content_type,
+                })
+            }))
         except:
-            logging.error("unsuccessfully post backup")
+            logging.error("unsuccessfully send backup")
             return False
         else:
-            result = result.json()
-            logging.info("successfully post backup")
+            result = json.JSONDecoder().decode(result)
+            logging.info("successfully send backup")
             return True
 
     def get_local_path(self, bucket_name, object_name) -> str:
@@ -129,9 +166,12 @@ class MinioWrapper(Minio):
         super().__init__(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
 
         self.force_remote = force_remote
-        self.manager = Manager(endpoint, access_key, secret_key, session_token, secure, region)
+        self.manager = Manager(endpoint)
         if self.force_remote:
             self.manager.exist = False
+        if self.manager.exist:
+            self.manager.create(endpoint, access_key, secret_key, session_token, secure, region)
+        logging.info(f"manager exist: {self.manager.exist}")
 
         self.upload_perf = 0
         self.download_perf = 0

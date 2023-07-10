@@ -1,13 +1,13 @@
 # !/bin/bash
 
 cd image-scale
-docker build -t johnson684/image-scale:python .
-docker push johnson684/image-scale:python
+docker build -t johnson684/image-scale:python-socket .
+docker push johnson684/image-scale:python-socket
 cd ..
 
 cd image-recognition
-docker build -t johnson684/image-recognition:python .
-docker push johnson684/image-recognition:python
+docker build -t johnson684/image-recognition:python-socket .
+docker push johnson684/image-recognition:python-socket
 cd ..
 
 # delete old deployments

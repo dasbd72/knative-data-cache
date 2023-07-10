@@ -6,9 +6,9 @@ spec:
   template:
     spec:
       containers:
-        - image: docker.io/johnson684/image-scale:python
+        - image: docker.io/johnson684/image-scale:python-socket
           # imagePullPolicy: Always
-          name: image-scale
+          name: image-scale-socket
           volumeMounts:
             - name: shared-volume
               mountPath: /shared
@@ -16,7 +16,7 @@ spec:
             - name: STORAGE_PATH
               value: /shared
             - name: LOG_LEVEL
-              value: WARNING
+              value: INFO
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
@@ -30,9 +30,9 @@ spec:
   template:
     spec:
       containers:
-        - image: docker.io/johnson684/image-recognition:python
+        - image: docker.io/johnson684/image-recognition:python-socket
           # imagePullPolicy: Always
-          name: image-recognition
+          name: image-recognition-socket
           volumeMounts:
             - name: shared-volume
               mountPath: /shared
@@ -40,7 +40,7 @@ spec:
             - name: STORAGE_PATH
               value: /shared
             - name: LOG_LEVEL
-              value: WARNING
+              value: INFO
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
