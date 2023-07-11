@@ -1,13 +1,13 @@
 # !/bin/bash
 
 cd image-scale
-docker build -t johnson684/image-scale:python .
-docker push johnson684/image-scale:python
+docker build -t johnson684/image-scale:python-socket .
+docker push johnson684/image-scale:python-socket
 cd ..
 
 cd image-recognition
-docker build -t johnson684/image-recognition:python .
-docker push johnson684/image-recognition:python
+docker build -t johnson684/image-recognition:python-socket .
+docker push johnson684/image-recognition:python-socket
 cd ..
 
 # delete old deployments
@@ -17,17 +17,25 @@ kubectl delete -f yamls/apps.yaml
 kubectl apply -f yamls/apps.yaml
 
 # images
-time curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images", "destination":"images-scaled"}'
-time curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-scaled", "short_result": true}'
+curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images", "destination":"images-scaled"}' | python -m json.tool
+curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-scaled", "short_result": true}' | python -m json.tool
 
 # forced remote
-time curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images", "destination":"images-scaled", "force_remote": true}'
-time curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-scaled", "force_remote": true, "short_result": true}'
+curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images", "destination":"images-scaled", "force_remote": true}' | python -m json.tool
+curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-scaled", "force_remote": true, "short_result": true}' | python -m json.tool
 
 # images-old
-time curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-old", "destination":"images-old-scaled"}'
-time curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-old-scaled"}'
+curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-old", "destination":"images-old-scaled"}' | python -m json.tool
+curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-old-scaled"}' | python -m json.tool
 
 # forced remote
-time curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-old", "destination":"images-old-scaled", "force_remote": true}'
-time curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-old-scaled", "force_remote": true}'
+curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-old", "destination":"images-old-scaled", "force_remote": true}' | python -m json.tool
+curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-old-scaled", "force_remote": true}' | python -m json.tool
+
+# larger_image
+curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"larger_image", "destination":"larger_image-scaled"}' | python -m json.tool
+curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"larger_image-scaled"}' | python -m json.tool
+
+# forced remote
+curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"larger_image", "destination":"larger_image-scaled", "force_remote": true}' | python -m json.tool
+curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"larger_image-scaled", "force_remote": true}' | python -m json.tool
