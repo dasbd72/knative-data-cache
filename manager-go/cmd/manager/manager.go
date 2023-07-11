@@ -3,11 +3,14 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/dasbd72/images-processing-benchmarks/manager-go/pkg/filesQueue" //hasn't merge to main yet
 	"github.com/dasbd72/images-processing-benchmarks/manager-go/pkg/minioclients"
 	"github.com/dasbd72/images-processing-benchmarks/manager-go/pkg/utils"
 )
@@ -26,6 +29,7 @@ var (
 	storagePath string
 	hostIP      string
 	mcs         *minioclients.MinioClients
+	fq          filesQueue.FilesQueue
 )
 
 func init() {
@@ -202,9 +206,33 @@ func handle_upload(request Request, response *Response) {
 	})
 
 	// TODO: more functions
+	// first we check whether there's something out-of-date (exceed 20 seconds)
+	fmt.Print("start\n")
+	for fq.Size() > 0 {
+		file := fq.Front()
+		currentTime := time.Now().Unix()
+		timeDiff := currentTime - file.Timestamp
+		if timeDiff > 20 {
+			os.Remove(utils.GetLocalPath(storagePath, file.Endpoint, file.Bucket, file.Object)) // remove the file
+			fq.Dequeue()
+		} else {
+			break
+		}
+	}
+	// control the size of queue in 3000
+	if fq.Size() < 3000 {
+		res.Result = true
+		fq.Enqueue(time.Now().Unix(), req.Endpoint, req.Bucket, req.Object)
+		fmt.Printf("queue size : %d\n", fq.Size())
+	} else {
+		res.Result = false
+	}
+	fmt.Print("end\n")
+	// TODO end
+
 	// Check if endpoint exist
 	if mcs.Exist(req.Endpoint) {
-		res.Result = true
+		//res.Result = true
 	} else {
 		response.Success = false
 		return

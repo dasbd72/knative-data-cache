@@ -6,8 +6,9 @@ spec:
   template:
     spec:
       containers:
+
         - image: docker.io/johnson684/image-scale:python-socket
-          # imagePullPolicy: Always
+          imagePullPolicy: Always
           name: image-scale-socket
           volumeMounts:
             - name: shared-volume
@@ -30,9 +31,11 @@ spec:
   template:
     spec:
       containers:
+
         - image: docker.io/johnson684/image-recognition:python-socket
-          # imagePullPolicy: Always
+          imagePullPolicy: Always
           name: image-recognition-socket
+
           volumeMounts:
             - name: shared-volume
               mountPath: /shared

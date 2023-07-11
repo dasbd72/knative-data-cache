@@ -24,8 +24,10 @@ spec:
           effect: NoSchedule
       containers:
         - name: manager-container
+
           image: johnson684/mana:golang-socket
-          # imagePullPolicy: Always
+          imagePullPolicy: Always
+
           resources:
             requests:
               cpu: 30m
