@@ -7,6 +7,7 @@ import logging
 import time
 import socket
 import json
+import psutil
 
 logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")))
 
@@ -60,34 +61,48 @@ class Manager:
             return "{}"
         else:
             result = json.JSONDecoder().decode(result)
-            if 'success' in result.keys() and result['success']:
-                return result['body']
+            if "success" in result.keys() and result["success"]:
+                return result["body"]
             else:
                 return "{}"
 
-    def create(self, endpoint, access_key=None, secret_key=None, session_token=None, secure=True, region=None):
+    def create(
+        self,
+        endpoint,
+        access_key=None,
+        secret_key=None,
+        session_token=None,
+        secure=True,
+        region=None,
+    ):
         if not self.manager_ip or not self.storage_path:
             return False
         try:
-            result = self.send_recv(json.JSONEncoder().encode({
-                'type': 'create',
-                'body': json.JSONEncoder().encode({
-                    'endpoint': endpoint,
-                    'accessKey': access_key,
-                    'secretKey': secret_key,
-                    'sessionToken': session_token,
-                    'secure': secure,
-                    'region': region,
-                })
-            }))
+            result = self.send_recv(
+                json.JSONEncoder().encode(
+                    {
+                        "type": "create",
+                        "body": json.JSONEncoder().encode(
+                            {
+                                "endpoint": endpoint,
+                                "accessKey": access_key,
+                                "secretKey": secret_key,
+                                "sessionToken": session_token,
+                                "secure": secure,
+                                "region": region,
+                            }
+                        ),
+                    }
+                )
+            )
         except:
             logging.error("unsuccessfully send create")
             self.exist = False
         else:
             logging.info("successfully send create")
             result = json.JSONDecoder().decode(result)
-            if 'result' in result.keys():
-                self.exist = result['result']
+            if "result" in result.keys():
+                self.exist = result["result"]
             else:
                 self.exist = False
 
@@ -95,61 +110,60 @@ class Manager:
         if not self.manager_ip or not self.storage_path:
             return False
         try:
-            result = self.send_recv(json.JSONEncoder().encode({
-                'type': 'download',
-                'body': json.JSONEncoder().encode({
-                    'endpoint': self.endpoint,
-                    'bucket': bucket_name,
-                    'object': object_name
-                })
-            }))
-        except:
-            logging.error("unsuccessfully send download")
-            return False
-        else:
-            logging.info("successfully send download")
-            result = json.JSONDecoder().decode(result)
-            if 'result' in result.keys():
-                return result['result']
-            else:
-                return False
+            dst = os.path.join(
+                self.storage_path,
+                self.endpoint.replace("/", "_"),
+                bucket_name,
+                object_name,
+            )
+            result = os.path.exists(dst)
+            return result
 
-    def local_upload(self, bucket_name, object_name, file_path,
-                     content_type="application/octet-stream") -> bool:
+        except:
+            logging.error("unsuccessfully check whether the file exists")
+            return False
+
+    def local_upload(
+        self,
+        bucket_name,
+        object_name,
+        file_path,
+        content_type="application/octet-stream",
+    ) -> bool:
         if not self.manager_ip or not self.storage_path:
             return False
         try:
-            result = self.send_recv(json.JSONEncoder().encode({
-                'type': 'upload',
-                'body': json.JSONEncoder().encode({
-                    'endpoint': self.endpoint,
-                    'bucket': bucket_name,
-                    'object': object_name
-                })
-            }))
+            result = True
+            disk_usage = psutil.disk_usage(self.storage_path)
+            # print(f"{disk_usage.used}, {disk_usage.percent}")
+            if disk_usage.percent > 90:
+                result = False  # if already used 90% of memory
+            return result
         except:
-            logging.error("unsuccessfully send upload")
+            logging.error("unsuccessfully check disk usage")
             return False
-        else:
-            result = json.JSONDecoder().decode(result)
-            if 'result' in result.keys():
-                return result['result']
-            else:
-                return False
 
-    def backup(self, bucket_name, object_name, content_type="application/octet-stream") -> bool:
+    def backup(
+        self, bucket_name, object_name, content_type="application/octet-stream"
+    ) -> bool:
         if not self.manager_ip or not self.storage_path:
             return False
         try:
-            result = self.send_recv(json.JSONEncoder().encode({
-                'type': 'backup',
-                'body': json.JSONEncoder().encode({
-                    'endpoint': self.endpoint,
-                    'bucket': bucket_name,
-                    'object': object_name,
-                    'contentType': content_type,
-                })
-            }))
+            result = self.send_recv(
+                json.JSONEncoder().encode(
+                    {
+                        "type": "backup",
+                        "body": json.JSONEncoder().encode(
+                            {
+                                "endpoint": self.endpoint,
+                                "bucket": bucket_name,
+                                "object": object_name,
+                                "contentType": content_type,
+                            }
+                        ),
+                    }
+                )
+            )
         except:
             logging.error("unsuccessfully send backup")
             return False
@@ -159,45 +173,72 @@ class Manager:
             return True
 
     def get_local_path(self, bucket_name, object_name) -> str:
-        return os.path.join(self.storage_path, self.endpoint.replace('/', '_'), bucket_name, object_name)
+        return os.path.join(
+            self.storage_path, self.endpoint.replace("/", "_"), bucket_name, object_name
+        )
 
 
 class MinioWrapper(Minio):
-    """ Inherited Wrapper """
+    """Inherited Wrapper"""
 
-    def __init__(self, endpoint, access_key=None,
-                 secret_key=None,
-                 session_token=None,
-                 secure=True,
-                 region=None,
-                 http_client=None,
-                 credentials=None,
-                 force_remote=False,
-                 force_backup=False):
-        super().__init__(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
+    def __init__(
+        self,
+        endpoint,
+        access_key=None,
+        secret_key=None,
+        session_token=None,
+        secure=True,
+        region=None,
+        http_client=None,
+        credentials=None,
+        force_remote=False,
+        force_backup=False,
+    ):
+        super().__init__(
+            endpoint,
+            access_key,
+            secret_key,
+            session_token,
+            secure,
+            region,
+            http_client,
+            credentials,
+        )
 
         self.force_remote = force_remote
-
         self.manager = Manager(endpoint)
-
         self.force_backup = force_backup
         if self.force_remote:
             self.manager.exist = False
         if self.manager.exist:
-            self.manager.create(endpoint, access_key, secret_key, session_token, secure, region)
+            self.manager.create(
+                endpoint, access_key, secret_key, session_token, secure, region
+            )
         logging.info(f"manager exist: {self.manager.exist}")
 
         self.upload_perf = 0
         self.download_perf = 0
         self.backup_perf = 0
 
-    def fput_object(self, bucket_name, object_name, file_path,
-                    content_type="application/octet-stream",
-                    metadata=None, sse=None, progress=None,
-                    part_size=0, num_parallel_uploads=3,
-                    tags=None, retention=None, legal_hold=False):
+    def fput_object(
+        self,
+        bucket_name,
+        object_name,
+        file_path,
+        content_type="application/octet-stream",
+        metadata=None,
+        sse=None,
+        progress=None,
+        part_size=0,
+        num_parallel_uploads=3,
+        tags=None,
+        retention=None,
+        legal_hold=False,
+    ):
         start = time.perf_counter()
-        local_upload = self.manager.exist and self.manager.local_upload(bucket_name, object_name, file_path, content_type)
+        local_upload = self.manager.exist and self.manager.local_upload(
+            bucket_name, object_name, file_path, content_type
+        )
         self.upload_perf += time.perf_counter() - start
         if local_upload:
             # copy to local
@@ -214,40 +255,108 @@ class MinioWrapper(Minio):
                 self.backup_perf += time.perf_counter() - start
                 if not success:
                     logging.error("post backup failed, fallback to upload")
-                    super().fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
+                    super().fput_object(
+                        bucket_name,
+                        object_name,
+                        file_path,
+                        content_type,
+                        metadata,
+                        sse,
+                        progress,
+                        part_size,
+                        num_parallel_uploads,
+                        tags,
+                        retention,
+                        legal_hold,
+                    )
         else:
             # upload
             logging.info("upload to remote")
-            super().fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
+            super().fput_object(
+                bucket_name,
+                object_name,
+                file_path,
+                content_type,
+                metadata,
+                sse,
+                progress,
+                part_size,
+                num_parallel_uploads,
+                tags,
+                retention,
+                legal_hold,
+            )
 
-    def fget_object(self, bucket_name, object_name, file_path,
-                    request_headers=None, ssec=None, version_id=None,
-                    extra_query_params=None, tmp_file_path=None, progress=None):
+    def fget_object(
+        self,
+        bucket_name,
+        object_name,
+        file_path,
+        request_headers=None,
+        ssec=None,
+        version_id=None,
+        extra_query_params=None,
+        tmp_file_path=None,
+        progress=None,
+    ):
         start = time.perf_counter()
-        local_download = self.manager.exist and self.manager.local_download(bucket_name, object_name)
+        local_download = self.manager.exist and self.manager.local_download(
+            bucket_name, object_name
+        )
         self.download_perf += time.perf_counter() - start
         if local_download:
             logging.info("copy from local")
             src = self.manager.get_local_path(bucket_name, object_name)
             shutil.copy(src, file_path)
+            os.remove(src)  # delete file after use once
+            logging.info("remove used files from local")
         else:
             logging.info("download from remote")
-            super().fget_object(bucket_name, object_name, file_path, request_headers, ssec, version_id, extra_query_params, tmp_file_path, progress)
+            super().fget_object(
+                bucket_name,
+                object_name,
+                file_path,
+                request_headers,
+                ssec,
+                version_id,
+                extra_query_params,
+                tmp_file_path,
+                progress,
+            )
 
-    def list_objects(self, bucket_name, prefix=None, recursive=False,
-                     start_after=None, include_user_meta=False,
-                     include_version=False, use_api_v1=False,
-                     use_url_encoding_type=True, fetch_owner=False
-                     ):
+    def list_objects(
+        self,
+        bucket_name,
+        prefix=None,
+        recursive=False,
+        start_after=None,
+        include_user_meta=False,
+        include_version=False,
+        use_api_v1=False,
+        use_url_encoding_type=True,
+        fetch_owner=False,
+    ):
         object_set = set()
-        remote_objects = super().list_objects(bucket_name, prefix, recursive, start_after, include_user_meta, include_version, use_api_v1, use_url_encoding_type, fetch_owner)
+        remote_objects = super().list_objects(
+            bucket_name,
+            prefix,
+            recursive,
+            start_after,
+            include_user_meta,
+            include_version,
+            use_api_v1,
+            use_url_encoding_type,
+            fetch_owner,
+        )
         for obj in remote_objects:
             obj: MinioObject
             object_set.add(obj.object_name)
             yield obj
 
         if not self.force_remote and self.manager.exist:
-            if os.path.exists(os.path.join(self.manager.storage_path, bucket_name, prefix)):
+            if os.path.exists(
+                os.path.join(self.manager.storage_path, bucket_name, prefix)
+            ):
                 bucket_dir = os.path.join(self.manager.storage_path, bucket_name)
                 if prefix.endswith("/"):
                     object_dir = os.path.normpath(prefix)
