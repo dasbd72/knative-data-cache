@@ -5,7 +5,8 @@ FROM python:3.10-slim AS release
 ENV PYTHONUNBUFFERED True
 
 WORKDIR /app
-COPY . ./
+COPY image-scale/. ./
+COPY pkg/wrapper.py ./
 RUN pip install -r requirements.txt
 
 EXPOSE 8080

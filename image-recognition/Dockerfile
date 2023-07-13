@@ -5,7 +5,8 @@ FROM dasbd72/pytorch-cpu AS release
 ENV PYTHONUNBUFFERED True
 
 WORKDIR /app
-COPY . ./
+COPY image-recognition/. ./
+COPY pkg/wrapper.py ./
 RUN pip install -r requirements.txt
 
 EXPOSE 8080
