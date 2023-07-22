@@ -64,7 +64,7 @@ def imageRecognition():
         force_remote = data['force_remote']
     else:
         force_remote = False
-    local_path = './storage/'
+    local_path = f'./storage-{uuid.uuid4()}/'
     # add
     if 'force_backup' in data:
         force_backup = data['force_backup']

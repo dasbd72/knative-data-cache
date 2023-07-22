@@ -98,7 +98,7 @@ def imageRecognition():
         short_result = data['short_result']
     else:
         short_result = False
-    local_path = './storage/'
+    local_path = f'./storage-{uuid.uuid4()}/'
 
     # remove exist storage and create
     if os.path.exists(local_path):
