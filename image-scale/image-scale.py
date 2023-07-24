@@ -9,6 +9,7 @@ import uuid
 from wrapper import MinioWrapper as Minio
 from PIL import Image
 from flask import Flask, request, make_response
+import requests
 
 app = Flask(__name__)
 
@@ -49,6 +50,28 @@ def scaleImages(local_path, width, height):
         img.save(filepath, 'JPEG')
     return
 
+def send_trigger_request(bucket_name, source):
+    url = "http://broker-ingress.knative-eventing.svc.cluster.local/default/default"
+    headers = {
+        "Ce-Id": str(uuid.uuid4()),
+        "Ce-Specversion": "0.3",
+        "Ce-Type": "image-read",
+        "Ce-Source": "image-scale",
+        "Content-Type": "application/json",
+    }
+    source_data = source + "-scaled"
+    data = {
+        "bucket":bucket_name, 
+        "source": source_data, 
+        "short_result": True
+    }
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()  # Raises an exception for 4xx and 5xx status codes
+        return response.text
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+        return None
 
 @app.route('/', methods=['POST'])
 def imageRecognition():
@@ -59,6 +82,7 @@ def imageRecognition():
 
     bucket_name = data['bucket'].rstrip("/")
     download_path = data['source'].rstrip("/") + "/"
+    source = data['source'].rstrip("/")
     upload_path = data['destination'].rstrip("/") + "/"
     if 'force_remote' in data:
         force_remote = data['force_remote']
@@ -106,6 +130,7 @@ def imageRecognition():
     code_end_time = time.perf_counter()
     code_duration = code_end_time - code_start_time
 
+    response_text = send_trigger_request(bucket_name, source)
     # send response
     response = make_response(json.dumps({
         "force_remote": force_remote,
