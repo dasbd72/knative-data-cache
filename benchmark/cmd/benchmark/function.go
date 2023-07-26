@@ -107,9 +107,12 @@ func function_image_scale(source string, destination string, forceRemote bool) I
 	defer res.Body.Close()
 	duration := time.Since(start)
 
-	err = json.NewDecoder(res.Body).Decode(&res_data)
+	p := make([]byte, 1024)
+	n, _ := res.Body.Read(p)
+	err = json.Unmarshal(p[:n], &res_data)
 	if err != nil {
-		panic(err)
+		fmt.Println(string(p[:n]))
+		// panic(err)
 	}
 
 	return ImageScaleResult{duration.Seconds(), res_data}
@@ -138,9 +141,12 @@ func function_image_recognition(source string, forceRemote bool) ImageRecognitio
 	defer res.Body.Close()
 	duration := time.Since(start)
 
-	err = json.NewDecoder(res.Body).Decode(&res_data)
+	p := make([]byte, 1024)
+	n, _ := res.Body.Read(p)
+	err = json.Unmarshal(p[:n], &res_data)
 	if err != nil {
-		panic(err)
+		fmt.Println(string(p[:n]))
+		// panic(err)
 	}
 
 	return ImageRecognitionResult{duration.Seconds(), res_data}
