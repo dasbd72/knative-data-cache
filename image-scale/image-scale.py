@@ -2,22 +2,13 @@ import os
 import shutil
 import json
 import time
-from datetime import date, datetime
 
-import argparse
 import uuid
 from wrapper import MinioWrapper as Minio
 from PIL import Image
 from flask import Flask, request, make_response
 
 app = Flask(__name__)
-
-parser = argparse.ArgumentParser(
-    prog='Image Scale',
-    description='Scales the images to 224x224',
-)
-parser.add_argument('-p', '--port', type=int, default=8080)
-args = parser.parse_args()
 
 endpoint = "10.121.240.169:9000"
 access_key = "LbtKL76UbWedONnd"
@@ -92,7 +83,7 @@ def imageRecognition():
     download_duration = download_end_time - download_start_time
 
     scale_start_time = time.perf_counter()
-    scaleImages(local_path, 224, 224)
+    scaleImages(local_path, 1024, 1024)
     scale_end_time = time.perf_counter()
     scale_duration = scale_end_time - scale_start_time
 
@@ -126,4 +117,4 @@ def imageRecognition():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=args.port)
+    app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 8080))
