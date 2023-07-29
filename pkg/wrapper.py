@@ -135,9 +135,9 @@ class Manager:
         try:
             result = True
             disk_usage = psutil.disk_usage(self.storage_path)
-            # print(f"{disk_usage.used}, {disk_usage.percent}")
-            if disk_usage.percent > 90:
-                result = False  # if already used 90% of memory
+            if disk_usage.free < os.path.getsize(file_path) * 2:
+                logging.info("disk is full")
+                result = False
             return result
         except:
             logging.error("unsuccessfully check disk usage")
