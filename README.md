@@ -12,7 +12,7 @@ Add the lines right under data as below
 data:
   "kubernetes.podspec-persistent-volume-claim": enabled
   "kubernetes.podspec-persistent-volume-write": enabled
-  "kubernetes.podspec-init-containers": enalbed
+  "kubernetes.podspec-init-containers": enabled
 ```
 
 Deploy with the script
