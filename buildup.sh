@@ -2,6 +2,8 @@
 kubectl delete -f yamls/apps.yaml
 kubectl delete -f yamls/manager.yaml
 kubectl delete -f yamls/cache-deleter.yaml
+kubectl delete -f yamls/triggers.yaml
+kn broker delete default
 docker rmi johnson684/mana:golang-socket -f
 docker rmi johnson684/image-scale:python-socket -f
 docker rmi johnson684/image-recognition:python-socket -f
@@ -26,3 +28,5 @@ docker push johnson684/image-recognition:python-socket
 kubectl apply -f yamls/apps.yaml
 kubectl apply -f yamls/manager.yaml
 kubectl apply -f yamls/cache-deleter.yaml
+kubectl apply -f yamls/triggers.yaml
+kn broker create default -n default
