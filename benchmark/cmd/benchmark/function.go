@@ -70,10 +70,12 @@ func function_chain(wg *sync.WaitGroup, index int, forceRemote bool) FunctionCha
 	fmt.Println("function_chain", index, "start")
 
 	// ==================== function ====================
-	source := fmt.Sprintf("larger_image_%d", index)
+	source := "larger_image"
+	intermediate := fmt.Sprintf("larger_image_%d-scaled", index)
 	start := time.Now()
-	is_result := function_image_scale(source, forceRemote)
-	ir_result := function_image_recognition(source+"-scaled", forceRemote)
+	is_result := function_image_scale(source, intermediate, forceRemote)
+	// time.Sleep(10 * time.Second)
+	ir_result := function_image_recognition(intermediate, forceRemote)
 	duration := time.Since(start)
 
 	fmt.Println("function_chain", index, "end")
@@ -81,13 +83,13 @@ func function_chain(wg *sync.WaitGroup, index int, forceRemote bool) FunctionCha
 	return FunctionChainResult{int64(start.UnixMicro()), duration.Seconds(), is_result, ir_result}
 }
 
-func function_image_scale(source string, forceRemote bool) ImageScaleResult {
+func function_image_scale(source string, destination string, forceRemote bool) ImageScaleResult {
 	var req_data ImageScaleRequest
 	var res_data ImageScaleResponse
 
 	req_data.Bucket = "stress-benchmark"
 	req_data.Source = source
-	req_data.Destination = source + "-scaled"
+	req_data.Destination = destination
 	req_data.ForceRemote = forceRemote
 	req_data.ForceBackup = false
 
@@ -105,9 +107,12 @@ func function_image_scale(source string, forceRemote bool) ImageScaleResult {
 	defer res.Body.Close()
 	duration := time.Since(start)
 
-	err = json.NewDecoder(res.Body).Decode(&res_data)
+	p := make([]byte, 1024)
+	n, _ := res.Body.Read(p)
+	err = json.Unmarshal(p[:n], &res_data)
 	if err != nil {
-		panic(err)
+		fmt.Println(string(p[:n]))
+		// panic(err)
 	}
 
 	return ImageScaleResult{duration.Seconds(), res_data}
@@ -136,9 +141,12 @@ func function_image_recognition(source string, forceRemote bool) ImageRecognitio
 	defer res.Body.Close()
 	duration := time.Since(start)
 
-	err = json.NewDecoder(res.Body).Decode(&res_data)
+	p := make([]byte, 1024)
+	n, _ := res.Body.Read(p)
+	err = json.Unmarshal(p[:n], &res_data)
 	if err != nil {
-		panic(err)
+		fmt.Println(string(p[:n]))
+		// panic(err)
 	}
 
 	return ImageRecognitionResult{duration.Seconds(), res_data}

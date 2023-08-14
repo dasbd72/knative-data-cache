@@ -4,7 +4,6 @@ import json
 import time
 from datetime import date, datetime
 
-import argparse
 import uuid
 from wrapper import MinioWrapper as Minio
 from PIL import Image
@@ -15,14 +14,6 @@ from flask import Flask, request, make_response
 
 # http server
 app = Flask(__name__)
-
-# Arguments
-parser = argparse.ArgumentParser(
-    prog='Image Recognition',
-    description='Runs resnet on the images',
-)
-parser.add_argument('-p', '--port', type=int, default=8080)
-args = parser.parse_args()
 
 # Minio
 endpoint = "10.121.240.169:9000"
@@ -151,4 +142,4 @@ def imageRecognition():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=args.port)
+    app.run(debug=True, host='0.0.0.0', port=os.environ.get('PORT', 8080))

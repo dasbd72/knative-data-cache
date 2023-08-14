@@ -135,9 +135,9 @@ class Manager:
         try:
             result = True
             disk_usage = psutil.disk_usage(self.storage_path)
-            # print(f"{disk_usage.used}, {disk_usage.percent}")
-            if disk_usage.percent > 90:
-                result = False  # if already used 90% of memory
+            if disk_usage.free < os.path.getsize(file_path) * 2:
+                logging.info("disk is full")
+                result = False
             return result
         except:
             logging.error("unsuccessfully check disk usage")
@@ -240,52 +240,55 @@ class MinioWrapper(Minio):
             bucket_name, object_name, file_path, content_type
         )
         self.upload_perf += time.perf_counter() - start
-        if local_upload:
-            # copy to local
-            dst = self.manager.get_local_path(bucket_name, object_name)
-            if not os.path.exists(os.path.dirname(dst)):
+        try:
+            if local_upload:
+                # copy to local
+                dst = self.manager.get_local_path(bucket_name, object_name)
                 os.makedirs(os.path.dirname(dst))
-            logging.info("copy to local")
-            shutil.copy(file_path, dst)
-            # tell manager to backup
-            if self.force_backup:
-                logging.info("force to backup")
-                start = time.perf_counter()
-                success = self.manager.backup(bucket_name, object_name, content_type)
-                self.backup_perf += time.perf_counter() - start
-                if not success:
-                    logging.error("post backup failed, fallback to upload")
-                    super().fput_object(
-                        bucket_name,
-                        object_name,
-                        file_path,
-                        content_type,
-                        metadata,
-                        sse,
-                        progress,
-                        part_size,
-                        num_parallel_uploads,
-                        tags,
-                        retention,
-                        legal_hold,
-                    )
-        else:
-            # upload
-            logging.info("upload to remote")
-            super().fput_object(
-                bucket_name,
-                object_name,
-                file_path,
-                content_type,
-                metadata,
-                sse,
-                progress,
-                part_size,
-                num_parallel_uploads,
-                tags,
-                retention,
-                legal_hold,
-            )
+                logging.info("copy to local:{}".format(dst))
+                shutil.copy(file_path, dst)
+                # tell manager to backup
+                if self.force_backup:
+                    logging.info("force backup {}".format(dst))
+                    start = time.perf_counter()
+                    success = self.manager.backup(bucket_name, object_name, content_type)
+                    self.backup_perf += time.perf_counter() - start
+                    if not success:
+                        logging.error("post backup failed, fallback to upload")
+                        super().fput_object(
+                            bucket_name,
+                            object_name,
+                            file_path,
+                            content_type,
+                            metadata,
+                            sse,
+                            progress,
+                            part_size,
+                            num_parallel_uploads,
+                            tags,
+                            retention,
+                            legal_hold,
+                        )
+            else:
+                # upload
+                logging.info("fput_object {}".format(object_name))
+                super().fput_object(
+                    bucket_name,
+                    object_name,
+                    file_path,
+                    content_type,
+                    metadata,
+                    sse,
+                    progress,
+                    part_size,
+                    num_parallel_uploads,
+                    tags,
+                    retention,
+                    legal_hold,
+                )
+        except Exception as e:
+            logging.error("fput_object {} failed".format(object_name))
+            logging.error(e)
 
     def fget_object(
         self,
@@ -304,25 +307,29 @@ class MinioWrapper(Minio):
             bucket_name, object_name
         )
         self.download_perf += time.perf_counter() - start
-        if local_download:
-            logging.info("copy from local")
-            src = self.manager.get_local_path(bucket_name, object_name)
-            shutil.copy(src, file_path)
-            os.remove(src)  # delete file after use once
-            logging.info("remove used files from local")
-        else:
-            logging.info("download from remote")
-            super().fget_object(
-                bucket_name,
-                object_name,
-                file_path,
-                request_headers,
-                ssec,
-                version_id,
-                extra_query_params,
-                tmp_file_path,
-                progress,
-            )
+        try:
+            if local_download:
+                src = self.manager.get_local_path(bucket_name, object_name)
+                logging.info("copying from local:{}".format(src))
+                shutil.copy(src, file_path)
+                os.remove(src)  # delete file after use once
+                logging.info("remove local file {}".format(src))
+            else:
+                logging.info("fget_object {}".format(object_name))
+                super().fget_object(
+                    bucket_name,
+                    object_name,
+                    file_path,
+                    request_headers,
+                    ssec,
+                    version_id,
+                    extra_query_params,
+                    tmp_file_path,
+                    progress,
+                )
+        except Exception as e:
+            logging.error("fget_object {} failed".format(object_name))
+            logging.error(e)
 
     def list_objects(
         self,
