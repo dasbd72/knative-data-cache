@@ -17,6 +17,7 @@ spec:
         autoscaling.knative.dev/max-scale: "100"
     spec:
       containers:
+
         - image: docker.io/johnson684/image-scale:python-socket
           imagePullPolicy: Always
           name: image-scale-socket
@@ -59,9 +60,11 @@ spec:
         autoscaling.knative.dev/max-scale: "100"
     spec:
       containers:
+
         - image: docker.io/johnson684/image-recognition:python-socket
           imagePullPolicy: Always
           name: image-recognition-socket
+
           volumeMounts:
             - name: shared-volume
               mountPath: /shared
@@ -81,3 +84,29 @@ spec:
         - name: shared-volume
           persistentVolumeClaim:
             claimName: shared-volume-claim
+# ---
+# apiVersion: serving.knative.dev/v1
+# kind: Service
+# metadata:
+#   name: image-watermark
+# spec:
+#   template:
+#     spec:
+#       containers:
+
+#         - image: docker.io/johnson684/image-watermark:python-socket
+#           imagePullPolicy: Always
+#           name: image-watermark-socket
+
+#           volumeMounts:
+#             - name: shared-volume
+#               mountPath: /shared
+#           env:
+#             - name: STORAGE_PATH
+#               value: /shared
+#             - name: LOG_LEVEL
+#               value: INFO
+#       volumes:
+#         - name: shared-volume
+#           persistentVolumeClaim:
+#             claimName: shared-volume-claim
