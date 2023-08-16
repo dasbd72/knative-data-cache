@@ -5,20 +5,15 @@ from minio import Minio
 from minio.datatypes import Object as MinioObject
 import logging
 import time
-
-import psutil
-
 import socket
 import json
-
+import psutil
 
 logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")))
 
 
 class Manager:
-
     def __init__(self, endpoint) -> None:
-
         self.exist = False
         self.endpoint: str = endpoint
         self.connection: socket.socket = None
@@ -66,38 +61,53 @@ class Manager:
             return "{}"
         else:
             result = json.JSONDecoder().decode(result)
-            if 'success' in result.keys() and result['success']:
-                return result['body']
+            if "success" in result.keys() and result["success"]:
+                return result["body"]
             else:
                 return "{}"
 
-
-        if self.manager_url:
-            try:
-                result = requests.post(
-                    self.manager_url + "/create",
-                    json={
-                        "endpoint": endpoint,
-                        "accessKey": access_key,
-                        "secretKey": secret_key,
-                        "sessionToken": session_token,
-                        "secure": secure,
-                        "region": region,
-                    },
+    def create(
+        self,
+        endpoint,
+        access_key=None,
+        secret_key=None,
+        session_token=None,
+        secure=True,
+        region=None,
+    ):
+        if not self.manager_ip or not self.storage_path:
+            return False
+        try:
+            result = self.send_recv(
+                json.JSONEncoder().encode(
+                    {
+                        "type": "create",
+                        "body": json.JSONEncoder().encode(
+                            {
+                                "endpoint": endpoint,
+                                "accessKey": access_key,
+                                "secretKey": secret_key,
+                                "sessionToken": session_token,
+                                "secure": secure,
+                                "region": region,
+                            }
+                        ),
+                    }
                 )
-            except:
-                logging.error("unsuccessfully post create")
-                self.exist = False
+            )
+        except:
+            logging.error("unsuccessfully send create")
+            self.exist = False
+        else:
+            logging.info("successfully send create")
+            result = json.JSONDecoder().decode(result)
+            if "result" in result.keys():
+                self.exist = result["result"]
             else:
-                result = result.json()
-                if "result" in result.keys():
-                    self.exist = result["result"]
-                else:
-                    self.exist = False
-            logging.info(f"post create result {self.exist}")
+                self.exist = False
 
     def local_download(self, bucket_name, object_name) -> bool:
-        if not self.storage_path:
+        if not self.manager_ip or not self.storage_path:
             return False
         try:
             dst = os.path.join(
@@ -108,8 +118,9 @@ class Manager:
             )
             result = os.path.exists(dst)
             return result
+
         except:
-            logging.error("unsuccessfully check download path")
+            logging.error("unsuccessfully check whether the file exists")
             return False
 
     def local_upload(
@@ -119,69 +130,40 @@ class Manager:
         file_path,
         content_type="application/octet-stream",
     ) -> bool:
-        if not self.manager_url or not self.storage_path:
+        if not self.manager_ip or not self.storage_path:
             return False
         try:
-            # result = requests.post(self.manager_url + "/upload", json={
-            #     'endpoint': self.endpoint,
-            #     'bucket': bucket_name,
-            #     'object': object_name
-            # })
             result = True
             disk_usage = psutil.disk_usage(self.storage_path)
-            # print(f"{disk_usage.used}, {disk_usage.percent}")
-            if disk_usage.percent > 90:
-                result = False  # if already used 90% of memory
+            if disk_usage.free < os.path.getsize(file_path) * 2:
+                logging.info("disk is full")
+                result = False
             return result
-
-    def create(self, endpoint, access_key=None, secret_key=None, session_token=None, secure=True, region=None):
-        if not self.manager_ip or not self.storage_path:
-            return False
-        try:
-            result = self.send_recv(json.JSONEncoder().encode({
-                'type': 'create',
-                'body': json.JSONEncoder().encode({
-                    'endpoint': endpoint,
-                    'accessKey': access_key,
-                    'secretKey': secret_key,
-                    'sessionToken': session_token,
-                    'secure': secure,
-                    'region': region,
-                })
-            }))
         except:
-            logging.error("unsuccessfully send create")
-            self.exist = False
-        else:
-            logging.info("successfully send create")
-            result = json.JSONDecoder().decode(result)
-            if 'result' in result.keys():
-                self.exist = result['result']
-            else:
-                self.exist = False
+            logging.error("unsuccessfully check disk usage")
+            return False
 
-    
-
-   
-        
-
- 
-
-
-
-    def backup(self, bucket_name, object_name, content_type="application/octet-stream") -> bool:
+    def backup(
+        self, bucket_name, object_name, content_type="application/octet-stream"
+    ) -> bool:
         if not self.manager_ip or not self.storage_path:
             return False
         try:
-            result = self.send_recv(json.JSONEncoder().encode({
-                'type': 'backup',
-                'body': json.JSONEncoder().encode({
-                    'endpoint': self.endpoint,
-                    'bucket': bucket_name,
-                    'object': object_name,
-                    'contentType': content_type,
-                })
-            }))
+            result = self.send_recv(
+                json.JSONEncoder().encode(
+                    {
+                        "type": "backup",
+                        "body": json.JSONEncoder().encode(
+                            {
+                                "endpoint": self.endpoint,
+                                "bucket": bucket_name,
+                                "object": object_name,
+                                "contentType": content_type,
+                            }
+                        ),
+                    }
+                )
+            )
         except:
             logging.error("unsuccessfully send backup")
             return False
@@ -197,31 +179,41 @@ class Manager:
 
 
 class MinioWrapper(Minio):
+    """Inherited Wrapper"""
 
-
-    """ Inherited Wrapper """
-
-    def __init__(self, endpoint, access_key=None,
-                 secret_key=None,
-                 session_token=None,
-                 secure=True,
-                 region=None,
-                 http_client=None,
-                 credentials=None,
-                 force_remote=False,
-                 force_backup=False):
-        super().__init__(endpoint, access_key, secret_key, session_token, secure, region, http_client, credentials)
+    def __init__(
+        self,
+        endpoint,
+        access_key=None,
+        secret_key=None,
+        session_token=None,
+        secure=True,
+        region=None,
+        http_client=None,
+        credentials=None,
+        force_remote=False,
+        force_backup=False,
+    ):
+        super().__init__(
+            endpoint,
+            access_key,
+            secret_key,
+            session_token,
+            secure,
+            region,
+            http_client,
+            credentials,
+        )
 
         self.force_remote = force_remote
-
         self.manager = Manager(endpoint)
-
         self.force_backup = force_backup
-
         if self.force_remote:
             self.manager.exist = False
         if self.manager.exist:
-            self.manager.create(endpoint, access_key, secret_key, session_token, secure, region)
+            self.manager.create(
+                endpoint, access_key, secret_key, session_token, secure, region
+            )
         logging.info(f"manager exist: {self.manager.exist}")
 
         self.upload_perf = 0
@@ -248,39 +240,55 @@ class MinioWrapper(Minio):
             bucket_name, object_name, file_path, content_type
         )
         self.upload_perf += time.perf_counter() - start
-        if local_upload:
-            # copy to local
-            dst = self.manager.get_local_path(bucket_name, object_name)
-            if not os.path.exists(os.path.dirname(dst)):
+        try:
+            if local_upload:
+                # copy to local
+                dst = self.manager.get_local_path(bucket_name, object_name)
                 os.makedirs(os.path.dirname(dst))
-            logging.info("copy to local")
-            shutil.copy(file_path, dst)
-            # tell manager to backup
-            if self.force_backup:
-                logging.info("force to backup")
-                start = time.perf_counter()
-                success = self.manager.backup(bucket_name, object_name, content_type)
-                self.backup_perf += time.perf_counter() - start
-                if not success:
-                    logging.error("post backup failed, fallback to upload")
-                    super().fput_object(bucket_name, object_name, file_path, content_type, metadata, sse, progress, part_size, num_parallel_uploads, tags, retention, legal_hold)
-        else:
-            # upload
-            logging.info("upload to remote")
-            super().fput_object(
-                bucket_name,
-                object_name,
-                file_path,
-                content_type,
-                metadata,
-                sse,
-                progress,
-                part_size,
-                num_parallel_uploads,
-                tags,
-                retention,
-                legal_hold,
-            )
+                logging.info("copy to local:{}".format(dst))
+                shutil.copy(file_path, dst)
+                # tell manager to backup
+                if self.force_backup:
+                    logging.info("force backup {}".format(dst))
+                    start = time.perf_counter()
+                    success = self.manager.backup(bucket_name, object_name, content_type)
+                    self.backup_perf += time.perf_counter() - start
+                    if not success:
+                        logging.error("post backup failed, fallback to upload")
+                        super().fput_object(
+                            bucket_name,
+                            object_name,
+                            file_path,
+                            content_type,
+                            metadata,
+                            sse,
+                            progress,
+                            part_size,
+                            num_parallel_uploads,
+                            tags,
+                            retention,
+                            legal_hold,
+                        )
+            else:
+                # upload
+                logging.info("fput_object {}".format(object_name))
+                super().fput_object(
+                    bucket_name,
+                    object_name,
+                    file_path,
+                    content_type,
+                    metadata,
+                    sse,
+                    progress,
+                    part_size,
+                    num_parallel_uploads,
+                    tags,
+                    retention,
+                    legal_hold,
+                )
+        except Exception as e:
+            logging.error("fput_object {} failed".format(object_name))
+            logging.error(e)
 
     def fget_object(
         self,
@@ -299,25 +307,29 @@ class MinioWrapper(Minio):
             bucket_name, object_name
         )
         self.download_perf += time.perf_counter() - start
-        if local_download:
-            logging.info("copy from local")
-            src = self.manager.get_local_path(bucket_name, object_name)
-            shutil.copy(src, file_path)
-            logging.info("remove from local")
-            os.remove(src)  # delete file after use once
-        else:
-            logging.info("download from remote")
-            super().fget_object(
-                bucket_name,
-                object_name,
-                file_path,
-                request_headers,
-                ssec,
-                version_id,
-                extra_query_params,
-                tmp_file_path,
-                progress,
-            )
+        try:
+            if local_download:
+                src = self.manager.get_local_path(bucket_name, object_name)
+                logging.info("copying from local:{}".format(src))
+                shutil.copy(src, file_path)
+                os.remove(src)  # delete file after use once
+                logging.info("remove local file {}".format(src))
+            else:
+                logging.info("fget_object {}".format(object_name))
+                super().fget_object(
+                    bucket_name,
+                    object_name,
+                    file_path,
+                    request_headers,
+                    ssec,
+                    version_id,
+                    extra_query_params,
+                    tmp_file_path,
+                    progress,
+                )
+        except Exception as e:
+            logging.error("fget_object {} failed".format(object_name))
+            logging.error(e)
 
     def list_objects(
         self,

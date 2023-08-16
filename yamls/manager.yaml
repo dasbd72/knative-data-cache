@@ -27,7 +27,6 @@ spec:
 
           image: johnson684/mana:golang-socket
           imagePullPolicy: Always
-
           resources:
             requests:
               cpu: 30m

@@ -4,6 +4,17 @@ metadata:
   name: image-scale
 spec:
   template:
+    metadata:
+      annotations:
+        # Knative concurrency-based autoscaling (default).
+        autoscaling.knative.dev/class: kpa.autoscaling.knative.dev
+        autoscaling.knative.dev/metric: concurrency
+        # Target 10 requests in-flight per pod.
+        autoscaling.knative.dev/target: "10"
+        # Disable scale to zero with a min scale of 1.
+        autoscaling.knative.dev/min-scale: "1"
+        # Limit scaling to 100 pods.
+        autoscaling.knative.dev/max-scale: "100"
     spec:
       containers:
 
@@ -18,6 +29,13 @@ spec:
               value: /shared
             - name: LOG_LEVEL
               value: INFO
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1280Mi
+            limits:
+              cpu: 4000m
+              memory: 4280Mi
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
@@ -29,6 +47,17 @@ metadata:
   name: image-recognition
 spec:
   template:
+    metadata:
+      annotations:
+        # Knative concurrency-based autoscaling (default).
+        autoscaling.knative.dev/class: kpa.autoscaling.knative.dev
+        autoscaling.knative.dev/metric: concurrency
+        # Target 10 requests in-flight per pod.
+        autoscaling.knative.dev/target: "10"
+        # Disable scale to zero with a min scale of 1.
+        autoscaling.knative.dev/min-scale: "1"
+        # Limit scaling to 100 pods.
+        autoscaling.knative.dev/max-scale: "100"
     spec:
       containers:
 
@@ -44,33 +73,40 @@ spec:
               value: /shared
             - name: LOG_LEVEL
               value: INFO
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1280Mi
+            limits:
+              cpu: 4000m
+              memory: 4280Mi
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
             claimName: shared-volume-claim
----
-apiVersion: serving.knative.dev/v1
-kind: Service
-metadata:
-  name: image-watermark
-spec:
-  template:
-    spec:
-      containers:
+# ---
+# apiVersion: serving.knative.dev/v1
+# kind: Service
+# metadata:
+#   name: image-watermark
+# spec:
+#   template:
+#     spec:
+#       containers:
 
-        - image: docker.io/johnson684/image-watermark:python-socket
-          imagePullPolicy: Always
-          name: image-watermark-socket
+#         - image: docker.io/johnson684/image-watermark:python-socket
+#           imagePullPolicy: Always
+#           name: image-watermark-socket
 
-          volumeMounts:
-            - name: shared-volume
-              mountPath: /shared
-          env:
-            - name: STORAGE_PATH
-              value: /shared
-            - name: LOG_LEVEL
-              value: INFO
-      volumes:
-        - name: shared-volume
-          persistentVolumeClaim:
-            claimName: shared-volume-claim
+#           volumeMounts:
+#             - name: shared-volume
+#               mountPath: /shared
+#           env:
+#             - name: STORAGE_PATH
+#               value: /shared
+#             - name: LOG_LEVEL
+#               value: INFO
+#       volumes:
+#         - name: shared-volume
+#           persistentVolumeClaim:
+#             claimName: shared-volume-claim
