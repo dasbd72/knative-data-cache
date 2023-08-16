@@ -25,6 +25,12 @@ spec:
             - name: shared-volume
               mountPath: /shared
           env:
+            - name: MINIO_ENDPOINT
+              value: 10.121.240.235:9000
+            - name: MINIO_ACCESS_KEY
+              value: LbtKL76UbWedONnd
+            - name: MINIO_SECRET_KEY
+              value: Bt0Omfh0S3ud5VEQAVR85CwinSULl3Sj
             - name: STORAGE_PATH
               value: /shared
             - name: LOG_LEVEL
@@ -69,6 +75,12 @@ spec:
             - name: shared-volume
               mountPath: /shared
           env:
+            - name: MINIO_ENDPOINT
+              value: 10.121.240.235:9000
+            - name: MINIO_ACCESS_KEY
+              value: LbtKL76UbWedONnd
+            - name: MINIO_SECRET_KEY
+              value: Bt0Omfh0S3ud5VEQAVR85CwinSULl3Sj
             - name: STORAGE_PATH
               value: /shared
             - name: LOG_LEVEL

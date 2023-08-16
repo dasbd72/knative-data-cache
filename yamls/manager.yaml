@@ -25,7 +25,7 @@ spec:
       containers:
         - name: manager-container
 
-          image: johnson684/mana:golang-socket
+          image: johnson684/manager:golang-socket
           imagePullPolicy: Always
           resources:
             requests:

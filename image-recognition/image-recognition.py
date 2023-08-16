@@ -2,7 +2,6 @@ import os
 import shutil
 import json
 import time
-from datetime import date, datetime
 
 import uuid
 from wrapper import MinioWrapper as Minio
@@ -16,9 +15,9 @@ from flask import Flask, request, make_response
 app = Flask(__name__)
 
 # Minio
-endpoint = "10.121.240.169:9000"
-access_key = "LbtKL76UbWedONnd"
-secret_key = "Bt0Omfh0S3ud5VEQAVR85CwinSULl3Sj"
+endpoint = os.getenv("MINIO_ENDPOINT")
+access_key = os.getenv("MINIO_ACCESS_KEY")
+secret_key = os.getenv("MINIO_SECRET_KEY")
 
 # Model
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -81,10 +80,6 @@ def imageRecognition():
         force_remote = data['force_remote']
     else:
         force_remote = False
-    if 'force_backup' in data:
-        force_backup = data['force_backup']
-    else:
-        force_backup = False
     if 'short_result' in data:
         short_result = data['short_result']
     else:
@@ -102,7 +97,6 @@ def imageRecognition():
         secret_key=secret_key,
         secure=False,
         force_remote=force_remote,
-        force_backup=force_backup
     )
     print(f"Connected to {endpoint}")
 
@@ -116,8 +110,6 @@ def imageRecognition():
     inference_end_time = time.perf_counter()
     inference_duration = inference_end_time - inference_start_time
 
-    minio_client.close()
-
     code_end_time = time.perf_counter()
     code_duration = code_end_time - code_start_time
 
@@ -127,7 +119,6 @@ def imageRecognition():
     response = make_response(json.dumps({
         "predictions": pred_lst,
         "force_remote": force_remote,
-        "force_backup": force_backup,
         "short_result": short_result,
         "code_duration": code_duration,
         "download_duration": download_duration,

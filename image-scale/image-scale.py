@@ -11,9 +11,10 @@ import requests
 
 app = Flask(__name__)
 
-endpoint = "10.121.240.169:9000"
-access_key = "LbtKL76UbWedONnd"
-secret_key = "Bt0Omfh0S3ud5VEQAVR85CwinSULl3Sj"
+# Minio
+endpoint = os.getenv("MINIO_ENDPOINT")
+access_key = os.getenv("MINIO_ACCESS_KEY")
+secret_key = os.getenv("MINIO_SECRET_KEY")
 
 
 def downloadImages(minio_client: Minio, bucket_name, remote_path, local_path):
@@ -42,6 +43,9 @@ def scaleImages(local_path, width, height):
     return
 
 def send_trigger_request(bucket_name, source):
+    return None
+
+    # TODO: Fix this, Ryan
     url = "http://broker-ingress.knative-eventing.svc.cluster.local/default/default"
     headers = {
         "Ce-Id": str(uuid.uuid4()),
@@ -73,18 +77,12 @@ def imageRecognition():
 
     bucket_name = data['bucket'].rstrip("/")
     download_path = data['source'].rstrip("/") + "/"
-    source = data['source'].rstrip("/")
     upload_path = data['destination'].rstrip("/") + "/"
     if 'force_remote' in data:
         force_remote = data['force_remote']
     else:
         force_remote = False
     local_path = f'./storage-{uuid.uuid4()}/'
-    # add
-    if 'force_backup' in data:
-        force_backup = data['force_backup']
-    else:
-        force_backup = False
     # add
     # remove exist storage and create
     if os.path.exists(local_path):
@@ -96,8 +94,7 @@ def imageRecognition():
         access_key=access_key,
         secret_key=secret_key,
         secure=False,
-        force_remote=force_remote,
-        force_backup=force_backup
+        force_remote=force_remote
     )
     print(f"Connected to {endpoint}")
 
@@ -116,23 +113,18 @@ def imageRecognition():
     upload_end_time = time.perf_counter()
     upload_duration = upload_end_time - upload_start_time
 
-    minio_client.close()
-
     code_end_time = time.perf_counter()
     code_duration = code_end_time - code_start_time
 
-    response_text = send_trigger_request(bucket_name, source)
     # send response
     response = make_response(json.dumps({
         "force_remote": force_remote,
-        "force_backup": force_backup,
         "code_duration": code_duration,
         "download_duration": download_duration,
         "scale_duration": scale_duration,
         "upload_duration": upload_duration,
         "download_post_duration": minio_client.get_download_perf(),
-        "upload_post_duration": minio_client.get_upload_perf(),
-        "backup_post_duration": minio_client.get_backup_perf()
+        "upload_post_duration": minio_client.get_upload_perf()
     }))
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())
