@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   name: cache-deleter
 spec:
-  schedule: "* * */1 * *"
+  schedule: "*/1 * * * *"
   jobTemplate:
     spec:
       template:
