@@ -123,7 +123,6 @@ def imageRecognition():
         "code_duration": code_duration,
         "download_duration": download_duration,
         "inference_duration": inference_duration,
-        "download_post_duration": minio_client.get_download_perf()
     }))
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())

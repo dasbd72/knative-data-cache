@@ -1,4 +1,5 @@
 import os
+from re import L
 import shutil
 from minio import Minio
 import logging
@@ -8,7 +9,7 @@ import json
 import psutil
 import hashlib
 
-logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")))
+logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")), format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s')
 
 
 class Manager:
@@ -101,9 +102,6 @@ class MinioWrapper(Minio):
             self.storage_path = None
         logging.info(f"STORAGE_PATH: {self.storage_path}")
 
-        self.upload_perf = 0
-        self.download_perf = 0
-
     def fput_object(
         self,
         bucket_name,
@@ -119,23 +117,6 @@ class MinioWrapper(Minio):
         retention=None,
         legal_hold=False,
     ):
-        #remote_upload_time = time.perf_counter() # test
-        super().fput_object(
-            bucket_name,
-            object_name,
-            file_path,
-            content_type,
-            metadata,
-            sse,
-            progress,
-            part_size,
-            num_parallel_uploads,
-            tags,
-            retention,
-            legal_hold,
-        )
-        #print("remote upload time:",end="") # test
-        #print(time.perf_counter() - remote_upload_time) # test
         local_upload = True
         try:
             if self.force_remote:
@@ -150,21 +131,32 @@ class MinioWrapper(Minio):
 
         except Exception as e:
             logging.error("{}".format(e))
-        
-        if local_upload:
-            try:
+
+        try:
+            if local_upload:
                 # copy to local
                 dst = self.get_local_path(bucket_name, object_name)
-                if not os.path.exists(os.path.dirname(dst)):
-                    os.makedirs(os.path.dirname(dst))
                 logging.info("fput_object local {}".format(dst))
-                #local_upload_time = time.perf_counter() # test
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy(file_path, dst)
-                #print("local upload time:",end="") # test
-                #print(time.perf_counter() - local_upload_time) # test
                 save_hash_to_file(calculate_hash(dst), self.get_hash_file_path(dst))
-            except Exception as e:
-                logging.error("fput_object {} failed: {}".format(object_name, e))
+            logging.info("fput_object {}".format(object_name))
+            super().fput_object(
+                bucket_name,
+                object_name,
+                file_path,
+                content_type,
+                metadata,
+                sse,
+                progress,
+                part_size,
+                num_parallel_uploads,
+                tags,
+                retention,
+                legal_hold,
+            )
+        except Exception as e:
+            logging.error("fput_object {} failed: {}".format(object_name, e))
 
     def fget_object(
         self,
@@ -179,6 +171,7 @@ class MinioWrapper(Minio):
         progress=None,
     ):
         local_download = True
+        src = self.get_local_path(bucket_name, object_name)
         try:
             if self.force_remote:
                 local_download = False
@@ -187,9 +180,8 @@ class MinioWrapper(Minio):
             if not self.storage_path:
                 local_download = False
                 logging.info("no storage path")
-
-            dst = self.get_local_path(bucket_name, object_name)
-            if not os.path.exists(dst):
+         
+            if not os.path.exists(src):
                 local_download = False
                 logging.info("file not exists")
 
@@ -197,10 +189,8 @@ class MinioWrapper(Minio):
             logging.error("{}".format(e))
 
         try:
-            src = self.get_local_path(bucket_name, object_name)
             if local_download:
                 logging.info("fget_object local {}".format(src))
-                #local_download_time = time.perf_counter() # test
                 shutil.copy(src, file_path)
                 #print("local download time:",end="") # test
                 #print(time.perf_counter() - local_download_time) # test

@@ -42,6 +42,7 @@ def scaleImages(local_path, width, height):
         img.save(filepath, 'JPEG')
     return
 
+
 def send_trigger_request(bucket_name, source):
     return None
 
@@ -56,8 +57,8 @@ def send_trigger_request(bucket_name, source):
     }
     source_data = source + "-scaled"
     data = {
-        "bucket":bucket_name, 
-        "source": source_data, 
+        "bucket": bucket_name,
+        "source": source_data,
         "short_result": True
     }
     try:
@@ -67,6 +68,7 @@ def send_trigger_request(bucket_name, source):
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
         return None
+
 
 @app.route('/', methods=['POST'])
 def imageRecognition():
@@ -123,8 +125,6 @@ def imageRecognition():
         "download_duration": download_duration,
         "scale_duration": scale_duration,
         "upload_duration": upload_duration,
-        "download_post_duration": minio_client.get_download_perf(),
-        "upload_post_duration": minio_client.get_upload_perf()
     }))
     response.headers["Content-Type"] = "application/json"
     response.headers["Ce-Id"] = str(uuid.uuid4())

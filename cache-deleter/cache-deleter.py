@@ -17,7 +17,7 @@ def delete_cache(folder_path):
 
             time_difference = current_time - creation_time
 
-            if time_difference.total_seconds() > 60: # TODO: modify this time
+            if time_difference.total_seconds() > 86400: # TODO: modify this time
                 os.remove(file_path)
                 print(f"remove file: {file_path}")
 
@@ -25,4 +25,3 @@ def delete_cache(folder_path):
 folder_path = r"/shared"
 
 delete_cache(folder_path)
-time.sleep(200)
