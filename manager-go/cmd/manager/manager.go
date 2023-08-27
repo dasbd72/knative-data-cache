@@ -60,7 +60,8 @@ func handleConnections() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Fatal(err)
+			log.Println("[Error] listener.Accept(): ", err)
+			continue
 		}
 
 		go handleConnection(conn)
@@ -79,8 +80,6 @@ func handleConnection(conn net.Conn) {
 			log.Println(err)
 			break
 		}
-
-		log.Printf("Request: %v\n", req)
 
 		// Handle the request
 		switch req.Type {
@@ -111,15 +110,19 @@ func handleFileEvents() {
 		log.Fatal(err)
 	}
 
+	// release storage
+	err = releaseStorage(0.5, lru)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// handle file events
 	for {
-		log.Println("Waiting for file events...")
 		select {
 		case event := <-watcher.Events:
-			log.Println("event: ", event)
 			err = handleFileEvent(event, lru)
 			if err != nil {
-				log.Fatal(err)
+				log.Println("[ERROR] handleFileEvent(event, lru): ", err)
 			}
 
 		case err := <-watcher.Errors:
@@ -130,21 +133,32 @@ func handleFileEvents() {
 
 func handleFileEvent(event rfsnotify.Event, lru *filelru.LRU) error {
 	if event.Has(rfsnotify.Write) || event.Has(rfsnotify.Create) || event.Has(rfsnotify.Chmod) {
-		log.Println("event modified file:", event.Name)
-		err := lru.Push(event.Name)
-		if err != nil {
-			return err
+		// push file to LRU if file is not directory
+		if fs, err := os.Stat(event.Name); err == nil && !fs.IsDir() {
+			err = lru.Push(event.Name)
+			if err != nil {
+				return err
+			}
 		}
 	} else if event.Has(rfsnotify.Remove) {
-		log.Println("event removed file:", event.Name)
 		err := lru.Remove(event.Name)
 		if err != nil {
 			return err
 		}
 	} else {
-		log.Println("[WARNING] other event: ", event)
+		log.Println("[WARNING] event not expected: ", event)
 	}
 
+	// release storage
+	err := releaseStorage(0.8, lru)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func releaseStorage(percentage float64, lru *filelru.LRU) error {
 	// check storage usage
 	var (
 		fs   syscall.Statfs_t
@@ -171,25 +185,32 @@ func handleFileEvent(event rfsnotify.Event, lru *filelru.LRU) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Storage usage: %d/%d\n", used, all)
 
-	// remove the least recently used file
-	for !lru.Empty() && float64(used) > 0.8*float64(all) {
-		file, err := lru.Pop()
-		if err != nil {
-			return err
-		}
-		log.Println("Removing file: ", file)
+	if float64(used) > percentage*float64(all) {
+		// if storage usage is greater than percentage, remove files
+		log.Printf("Storage usage: %d/%d\n", used, all)
 
-		err = os.Remove(file)
-		if err != nil {
-			return err
-		}
+		// remove the least recently used file
+		removedFiles := 0
+		for !lru.Empty() && float64(used) > percentage*float64(all) {
+			file, err := lru.Pop()
+			if err != nil {
+				return err
+			}
 
-		err = scan()
-		if err != nil {
-			return err
+			err = os.Remove(file)
+			if err != nil {
+				return err
+			}
+
+			err = scan()
+			if err != nil {
+				return err
+			}
+
+			removedFiles++
 		}
+		log.Println("Removed ", removedFiles, " files")
 	}
 
 	return nil
