@@ -1,4 +1,5 @@
 import os
+from re import L
 import shutil
 from minio import Minio
 import logging
@@ -6,6 +7,7 @@ import time
 import socket
 import json
 import psutil
+import hashlib
 
 logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")), format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s')
 
@@ -115,21 +117,20 @@ class MinioWrapper(Minio):
         retention=None,
         legal_hold=False,
     ):
-        local_upload = False
+        local_upload = True
         try:
             if self.force_remote:
-                raise Exception("force remote")
+                local_upload = False
+                logging.info("force remote")
 
             # TODO: use a better way to check whether to copy to local
             disk_usage = psutil.disk_usage(self.storage_path)
             if disk_usage.free < os.path.getsize(file_path) * 2:
-                raise Exception("disk is full")
+                local_upload = False
+                logging.info("disk is full")
 
         except Exception as e:
-            pass
-
-        else:
-            local_upload = True
+            logging.error("{}".format(e))
 
         try:
             if local_upload:
@@ -138,6 +139,7 @@ class MinioWrapper(Minio):
                 logging.info("fput_object local {}".format(dst))
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy(file_path, dst)
+                save_hash_to_file(calculate_hash(dst), self.get_hash_file_path(dst))
             logging.info("fput_object {}".format(object_name))
             super().fput_object(
                 bucket_name,
@@ -154,8 +156,7 @@ class MinioWrapper(Minio):
                 legal_hold,
             )
         except Exception as e:
-            logging.error("fput_object {} failed".format(object_name))
-            logging.error(e)
+            logging.error("fput_object {} failed: {}".format(object_name, e))
 
     def fget_object(
         self,
@@ -169,31 +170,47 @@ class MinioWrapper(Minio):
         tmp_file_path=None,
         progress=None,
     ):
-        local_download = False
+        local_download = True
+        src = self.get_local_path(bucket_name, object_name)
         try:
             if self.force_remote:
-                raise Exception("force remote")
+                local_download = False
+                logging.info("force remote")
 
             if not self.storage_path:
-                raise Exception("no storage path")
-
-            src = self.get_local_path(bucket_name, object_name)
+                local_download = False
+                logging.info("no storage path")
+         
             if not os.path.exists(src):
-                raise Exception("file not exists")
+                local_download = False
+                logging.info("file not exists")
 
         except Exception as e:
-            pass
-
-        else:
-            local_download = True
+            logging.error("{}".format(e))
 
         try:
             if local_download:
                 logging.info("fget_object local {}".format(src))
-                src = self.get_local_path(bucket_name, object_name)
                 shutil.copy(src, file_path)
+                #print("local download time:",end="") # test
+                #print(time.perf_counter() - local_download_time) # test
+                if not verify_hash(file_path, self.get_hash_file_path(src)):
+                    logging.info("incorrect hash value, file {} is corrupted.".format(object_name))
+                    logging.info("fget_object {}".format(object_name))
+                    super().fget_object(
+                        bucket_name,
+                        object_name,
+                        file_path,
+                        request_headers,
+                        ssec,
+                        version_id,
+                        extra_query_params,
+                        tmp_file_path,
+                        progress,
+                    )
             else:
                 logging.info("fget_object {}".format(object_name))
+                #remote_download_time = time.perf_counter() # test
                 super().fget_object(
                     bucket_name,
                     object_name,
@@ -205,9 +222,11 @@ class MinioWrapper(Minio):
                     tmp_file_path,
                     progress,
                 )
+                #print("remote download time:",end="") # test
+                #print(time.perf_counter() - remote_download_time) # test
+            
         except Exception as e:
-            logging.error("fget_object {} failed".format(object_name))
-            logging.error(e)
+            logging.error("fget_object {} failed: {}".format(object_name, e))
 
     """ Increased Methods """
 
@@ -215,3 +234,45 @@ class MinioWrapper(Minio):
         return os.path.join(
             self.storage_path, self.endpoint.replace("/", "_"), bucket_name, object_name
         )
+    def get_hash_file_path(self, file_path) -> str:
+        try:
+            parts = file_path.split(".")
+            parts[-1] = "txt"
+            hash_file_path = ".".join(parts)
+        except Exception as e:
+            logging.error("{}".format(e))
+        return hash_file_path
+
+    def get_upload_perf(self):
+        return self.upload_perf
+
+    def get_download_perf(self):
+        return self.download_perf
+
+def calculate_hash(file_path, hash_algorithm='sha256', buffer_size=65536):
+    """Calculate the hash of a file."""
+    try:
+        hash_obj = hashlib.new(hash_algorithm)
+        with open(file_path, 'rb') as file:
+            while chunk := file.read(buffer_size):
+                hash_obj.update(chunk)
+    except Exception as e:
+        logging.error("calculate hash error: {}".format(e))
+    return hash_obj.hexdigest()
+
+def save_hash_to_file(hash_value, hash_file_path):
+    """Save the hash value to a file."""
+    try:
+        with open(hash_file_path, 'w') as hash_file:
+            hash_file.write(hash_value)
+    except Exception as e:
+        logging.error("save hash file error: {}".format(e))
+
+def verify_hash(file_path, hash_file_path, hash_algorithm='sha256'):
+    """Verify if the hash of the file matches the provided hash value."""
+    calculated_hash = calculate_hash(file_path, hash_algorithm)
+    verifySuccess = False
+    with open(hash_file_path, 'r') as file:
+        hash_value = file.read()
+        verifySuccess = hash_value == calculated_hash
+    return verifySuccess
