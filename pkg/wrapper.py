@@ -7,7 +7,7 @@ import socket
 import json
 import psutil
 
-logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")))
+logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")), format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s')
 
 
 class Manager:
@@ -100,9 +100,6 @@ class MinioWrapper(Minio):
             self.storage_path = None
         logging.info(f"STORAGE_PATH: {self.storage_path}")
 
-        self.upload_perf = 0
-        self.download_perf = 0
-
     def fput_object(
         self,
         bucket_name,
@@ -118,23 +115,6 @@ class MinioWrapper(Minio):
         retention=None,
         legal_hold=False,
     ):
-        super().fput_object(
-            bucket_name,
-            object_name,
-            file_path,
-            content_type,
-            metadata,
-            sse,
-            progress,
-            part_size,
-            num_parallel_uploads,
-            tags,
-            retention,
-            legal_hold,
-        )
-
-        start = time.perf_counter()
-
         local_upload = False
         try:
             if self.force_remote:
@@ -146,20 +126,33 @@ class MinioWrapper(Minio):
                 raise Exception("disk is full")
 
         except Exception as e:
-            logging.error("{}".format(e))
+            pass
 
         else:
             local_upload = True
 
-        self.upload_perf += time.perf_counter() - start
-
         try:
             if local_upload:
                 # copy to local
-                dst = self.get_local_path(bucket_name, object_name)
-                os.makedirs(os.path.dirname(dst))
                 logging.info("fput_object local {}".format(dst))
+                dst = self.get_local_path(bucket_name, object_name)
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy(file_path, dst)
+            logging.info("fput_object {}".format(object_name))
+            super().fput_object(
+                bucket_name,
+                object_name,
+                file_path,
+                content_type,
+                metadata,
+                sse,
+                progress,
+                part_size,
+                num_parallel_uploads,
+                tags,
+                retention,
+                legal_hold,
+            )
         except Exception as e:
             logging.error("fput_object {} failed".format(object_name))
             logging.error(e)
@@ -176,8 +169,6 @@ class MinioWrapper(Minio):
         tmp_file_path=None,
         progress=None,
     ):
-        start = time.perf_counter()
-
         local_download = False
         try:
             if self.force_remote:
@@ -186,22 +177,20 @@ class MinioWrapper(Minio):
             if not self.storage_path:
                 raise Exception("no storage path")
 
-            dst = self.get_local_path(bucket_name, object_name)
-            if not os.path.exists(dst):
+            src = self.get_local_path(bucket_name, object_name)
+            if not os.path.exists(src):
                 raise Exception("file not exists")
 
         except Exception as e:
-            logging.error("{}".format(e))
+            pass
 
         else:
             local_download = True
 
-        self.download_perf += time.perf_counter() - start
-
         try:
             if local_download:
-                src = self.manager.get_local_path(bucket_name, object_name)
                 logging.info("fget_object local {}".format(src))
+                src = self.get_local_path(bucket_name, object_name)
                 shutil.copy(src, file_path)
             else:
                 logging.info("fget_object {}".format(object_name))
@@ -226,9 +215,3 @@ class MinioWrapper(Minio):
         return os.path.join(
             self.storage_path, self.endpoint.replace("/", "_"), bucket_name, object_name
         )
-
-    def get_upload_perf(self):
-        return self.upload_perf
-
-    def get_download_perf(self):
-        return self.download_perf
