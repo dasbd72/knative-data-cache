@@ -119,6 +119,7 @@ class MinioWrapper(Minio):
         retention=None,
         legal_hold=False,
     ):
+        #remote_upload_time = time.perf_counter() # test
         super().fput_object(
             bucket_name,
             object_name,
@@ -133,7 +134,8 @@ class MinioWrapper(Minio):
             retention,
             legal_hold,
         )
-
+        #print("remote upload time:",end="") # test
+        #print(time.perf_counter() - remote_upload_time) # test
         local_upload = True
         try:
             if self.force_remote:
@@ -156,7 +158,10 @@ class MinioWrapper(Minio):
                 if not os.path.exists(os.path.dirname(dst)):
                     os.makedirs(os.path.dirname(dst))
                 logging.info("fput_object local {}".format(dst))
+                #local_upload_time = time.perf_counter() # test
                 shutil.copy(file_path, dst)
+                #print("local upload time:",end="") # test
+                #print(time.perf_counter() - local_upload_time) # test
                 save_hash_to_file(calculate_hash(dst), self.get_hash_file_path(dst))
             except Exception as e:
                 logging.error("fput_object {} failed: {}".format(object_name, e))
@@ -195,7 +200,10 @@ class MinioWrapper(Minio):
             src = self.get_local_path(bucket_name, object_name)
             if local_download:
                 logging.info("fget_object local {}".format(src))
+                #local_download_time = time.perf_counter() # test
                 shutil.copy(src, file_path)
+                #print("local download time:",end="") # test
+                #print(time.perf_counter() - local_download_time) # test
                 if not verify_hash(file_path, self.get_hash_file_path(src)):
                     logging.info("incorrect hash value, file {} is corrupted.".format(object_name))
                     logging.info("fget_object {}".format(object_name))
@@ -212,6 +220,7 @@ class MinioWrapper(Minio):
                     )
             else:
                 logging.info("fget_object {}".format(object_name))
+                #remote_download_time = time.perf_counter() # test
                 super().fget_object(
                     bucket_name,
                     object_name,
@@ -223,6 +232,8 @@ class MinioWrapper(Minio):
                     tmp_file_path,
                     progress,
                 )
+                #print("remote download time:",end="") # test
+                #print(time.perf_counter() - remote_download_time) # test
             
         except Exception as e:
             logging.error("fget_object {} failed: {}".format(object_name, e))
