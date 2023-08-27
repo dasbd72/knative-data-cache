@@ -92,29 +92,23 @@ func benchmark(ntasks int, rate float64, forceRemote bool) {
 
 		AverageDuration float64 `json:"average_duration"`
 
-		TotalIsDuration             float64 `json:"total_is_duration"`
-		TotalIsCodeDuration         float64 `json:"total_is_code_duration"`
-		TotalIsDownloadDuration     float64 `json:"total_is_download_duration"`
-		TotalIsUploadDuration       float64 `json:"total_is_upload_duration"`
-		TotalIsDownloadPostDuration float64 `json:"total_is_download_post_duration"`
-		TotalIsUploadPostDuration   float64 `json:"total_is_upload_post_duration"`
+		TotalIsDuration         float64 `json:"total_is_duration"`
+		TotalIsCodeDuration     float64 `json:"total_is_code_duration"`
+		TotalIsDownloadDuration float64 `json:"total_is_download_duration"`
+		TotalIsUploadDuration   float64 `json:"total_is_upload_duration"`
 
-		AverageIsDuration             float64 `json:"average_is_duration"`
-		AverageIsCodeDuration         float64 `json:"average_is_code_duration"`
-		AverageIsDownloadDuration     float64 `json:"average_is_download_duration"`
-		AverageIsUploadDuration       float64 `json:"average_is_upload_duration"`
-		AverageIsDownloadPostDuration float64 `json:"average_is_download_post_duration"`
-		AverageIsUploadPostDuration   float64 `json:"average_is_upload_post_duration"`
+		AverageIsDuration         float64 `json:"average_is_duration"`
+		AverageIsCodeDuration     float64 `json:"average_is_code_duration"`
+		AverageIsDownloadDuration float64 `json:"average_is_download_duration"`
+		AverageIsUploadDuration   float64 `json:"average_is_upload_duration"`
 
-		TotalIrDuration             float64 `json:"total_ir_duration"`
-		TotalIrCodeDuration         float64 `json:"total_ir_code_duration"`
-		TotalIrDownloadDuration     float64 `json:"total_ir_download_duration"`
-		TotalIrDownloadPostDuration float64 `json:"total_ir_download_post_duration"`
+		TotalIrDuration         float64 `json:"total_ir_duration"`
+		TotalIrCodeDuration     float64 `json:"total_ir_code_duration"`
+		TotalIrDownloadDuration float64 `json:"total_ir_download_duration"`
 
-		AverageIrDuration             float64 `json:"average_ir_duration"`
-		AverageIrCodeDuration         float64 `json:"average_ir_code_duration"`
-		AverageIrDownloadDuration     float64 `json:"average_ir_download_duration"`
-		AverageIrDownloadPostDuration float64 `json:"average_ir_download_post_duration"`
+		AverageIrDuration         float64 `json:"average_ir_duration"`
+		AverageIrCodeDuration     float64 `json:"average_ir_code_duration"`
+		AverageIrDownloadDuration float64 `json:"average_ir_download_duration"`
 	}
 
 	// full log
@@ -134,13 +128,10 @@ func benchmark(ntasks int, rate float64, forceRemote bool) {
 		benchmark_result.TotalIsCodeDuration += result.IsResult.Response.CodeDuration
 		benchmark_result.TotalIsDownloadDuration += result.IsResult.Response.DownloadDuration
 		benchmark_result.TotalIsUploadDuration += result.IsResult.Response.UploadDuration
-		benchmark_result.TotalIsDownloadPostDuration += result.IsResult.Response.DownloadPostDuration
-		benchmark_result.TotalIsUploadPostDuration += result.IsResult.Response.UploadPostDuration
 
 		benchmark_result.TotalIrDuration += result.IrResult.Duration
 		benchmark_result.TotalIrCodeDuration += result.IrResult.Response.CodeDuration
 		benchmark_result.TotalIrDownloadDuration += result.IrResult.Response.DownloadDuration
-		benchmark_result.TotalIrDownloadPostDuration += result.IrResult.Response.DownloadPostDuration
 	}
 	benchmark_result.AverageDuration = benchmark_result.TotalDuration / float64(ntasks)
 
@@ -148,13 +139,10 @@ func benchmark(ntasks int, rate float64, forceRemote bool) {
 	benchmark_result.AverageIsCodeDuration = benchmark_result.TotalIsCodeDuration / float64(ntasks)
 	benchmark_result.AverageIsDownloadDuration = benchmark_result.TotalIsDownloadDuration / float64(ntasks)
 	benchmark_result.AverageIsUploadDuration = benchmark_result.TotalIsUploadDuration / float64(ntasks)
-	benchmark_result.AverageIsDownloadPostDuration = benchmark_result.TotalIsDownloadPostDuration / float64(ntasks)
-	benchmark_result.AverageIsUploadPostDuration = benchmark_result.TotalIsUploadPostDuration / float64(ntasks)
 
 	benchmark_result.AverageIrDuration = benchmark_result.TotalIrDuration / float64(ntasks)
 	benchmark_result.AverageIrCodeDuration = benchmark_result.TotalIrCodeDuration / float64(ntasks)
 	benchmark_result.AverageIrDownloadDuration = benchmark_result.TotalIrDownloadDuration / float64(ntasks)
-	benchmark_result.AverageIrDownloadPostDuration = benchmark_result.TotalIrDownloadPostDuration / float64(ntasks)
 
 	p, err = json.MarshalIndent(benchmark_result, "", "  ")
 	if err != nil {
