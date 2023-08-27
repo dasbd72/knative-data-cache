@@ -18,15 +18,11 @@ type ImageScaleRequest struct {
 }
 
 type ImageScaleResponse struct {
-	ForceRemote          bool    `json:"force_remote"`
-	ForceBackup          bool    `json:"force_backup"`
-	CodeDuration         float64 `json:"code_duration"`
-	DownloadDuration     float64 `json:"download_duration"`
-	ScaleDuration        float64 `json:"scale_duration"`
-	UploadDuration       float64 `json:"upload_duration"`
-	DownloadPostDuration float64 `json:"download_post_duration"`
-	UploadPostDuration   float64 `json:"upload_post_duration"`
-	BackupPostDuration   float64 `json:"backup_post_duration"`
+	ForceRemote      bool    `json:"force_remote"`
+	CodeDuration     float64 `json:"code_duration"`
+	DownloadDuration float64 `json:"download_duration"`
+	ScaleDuration    float64 `json:"scale_duration"`
+	UploadDuration   float64 `json:"upload_duration"`
 }
 
 type ImageRecognitionRequest struct {
@@ -37,14 +33,12 @@ type ImageRecognitionRequest struct {
 }
 
 type ImageRecognitionResponse struct {
-	Predictions          []string `json:"predictions"`
-	ForceRemote          bool     `json:"force_remote"`
-	ForceBackup          bool     `json:"force_backup"`
-	ShortResult          bool     `json:"short_result"`
-	CodeDuration         float64  `json:"code_duration"`
-	DownloadDuration     float64  `json:"download_duration"`
-	InferenceDuration    float64  `json:"inference_duration"`
-	DownloadPostDuration float64  `json:"download_post_duration"`
+	Predictions       []string `json:"predictions"`
+	ForceRemote       bool     `json:"force_remote"`
+	ShortResult       bool     `json:"short_result"`
+	CodeDuration      float64  `json:"code_duration"`
+	DownloadDuration  float64  `json:"download_duration"`
+	InferenceDuration float64  `json:"inference_duration"`
 }
 
 type ImageScaleResult struct {
