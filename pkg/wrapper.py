@@ -134,8 +134,8 @@ class MinioWrapper(Minio):
         try:
             if local_upload:
                 # copy to local
-                logging.info("fput_object local {}".format(dst))
                 dst = self.get_local_path(bucket_name, object_name)
+                logging.info("fput_object local {}".format(dst))
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy(file_path, dst)
             logging.info("fput_object {}".format(object_name))
