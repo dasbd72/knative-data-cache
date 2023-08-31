@@ -135,11 +135,14 @@ class MinioWrapper(Minio):
         try:
             if local_upload:
                 # copy to local
-                dst = self.get_local_path(bucket_name, object_name)
-                logging.info("fput_object local {}".format(dst))
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                shutil.copy(file_path, dst)
-                save_hash_to_file(calculate_hash(dst), self.get_hash_file_path(dst))
+                try:
+                    dst = self.get_local_path(bucket_name, object_name)
+                    logging.info("fput_object local {}".format(dst))
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    shutil.copy(file_path, dst)
+                    save_hash_to_file(calculate_hash(dst), self.get_hash_file_path(dst))
+                except Exception as e:
+                    logging.error("fput_object local {}".format(e))
             logging.info("fput_object {}".format(object_name))
             super().fput_object(
                 bucket_name,
