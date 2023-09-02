@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 )
 
@@ -58,9 +57,7 @@ type FunctionChainResult struct {
 	IrResult ImageRecognitionResult `json:"ir_result"`
 }
 
-func function_chain(wg *sync.WaitGroup, index int, forceRemote bool) FunctionChainResult {
-	defer wg.Done()
-
+func function_chain(index int, forceRemote bool) FunctionChainResult {
 	fmt.Println("function_chain", index, "start")
 
 	// ==================== function ====================
