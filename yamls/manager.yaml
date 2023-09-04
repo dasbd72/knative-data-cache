@@ -47,6 +47,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+            - name: MANAGER_PORT
+              value: "12345"
       volumes:
         - name: shared-volume
           hostPath:

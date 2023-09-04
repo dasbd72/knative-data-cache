@@ -29,9 +29,10 @@ class Manager:
                 self.manager_ip = f.read()
         else:
             self.manager_ip = None
-        self.manager_port = 12345
 
-        if self.storage_path is not None and self.manager_ip is not None:
+        self.manager_port = os.environ.get("MANAGER_PORT")
+
+        if self.storage_path is not None and self.manager_ip is not None and self.manager_port is not None:
             self.exist = True
         logging.info(f"MANAGER: {self.manager_ip}:{self.manager_port}")
 
@@ -183,7 +184,7 @@ class MinioWrapper(Minio):
             if not self.storage_path:
                 local_download = False
                 logging.info("no storage path")
-         
+
             if not os.path.exists(src):
                 local_download = False
                 logging.info("file not exists")
@@ -195,8 +196,8 @@ class MinioWrapper(Minio):
             if local_download:
                 logging.info("fget_object local {}".format(src))
                 shutil.copy(src, file_path)
-                #print("local download time:",end="") # test
-                #print(time.perf_counter() - local_download_time) # test
+                # print("local download time:",end="") # test
+                # print(time.perf_counter() - local_download_time) # test
                 if not verify_hash(file_path, self.get_hash_file_path(src)):
                     logging.info("incorrect hash value, file {} is corrupted.".format(object_name))
                     logging.info("fget_object {}".format(object_name))
@@ -213,7 +214,7 @@ class MinioWrapper(Minio):
                     )
             else:
                 logging.info("fget_object {}".format(object_name))
-                #remote_download_time = time.perf_counter() # test
+                # remote_download_time = time.perf_counter() # test
                 super().fget_object(
                     bucket_name,
                     object_name,
@@ -225,9 +226,9 @@ class MinioWrapper(Minio):
                     tmp_file_path,
                     progress,
                 )
-                #print("remote download time:",end="") # test
-                #print(time.perf_counter() - remote_download_time) # test
-            
+                # print("remote download time:",end="") # test
+                # print(time.perf_counter() - remote_download_time) # test
+
         except Exception as e:
             logging.error("fget_object {} failed: {}".format(object_name, e))
 
@@ -237,6 +238,7 @@ class MinioWrapper(Minio):
         return os.path.join(
             self.storage_path, self.endpoint.replace("/", "_"), bucket_name, object_name
         )
+
     def get_hash_file_path(self, file_path) -> str:
         try:
             parts = file_path.split(".")
@@ -252,6 +254,7 @@ class MinioWrapper(Minio):
     def get_download_perf(self):
         return self.download_perf
 
+
 def calculate_hash(file_path, hash_algorithm='sha256', buffer_size=65536):
     """Calculate the hash of a file."""
     try:
@@ -263,6 +266,7 @@ def calculate_hash(file_path, hash_algorithm='sha256', buffer_size=65536):
         logging.error("calculate hash error: {}".format(e))
     return hash_obj.hexdigest()
 
+
 def save_hash_to_file(hash_value, hash_file_path):
     """Save the hash value to a file."""
     try:
@@ -270,6 +274,7 @@ def save_hash_to_file(hash_value, hash_file_path):
             hash_file.write(hash_value)
     except Exception as e:
         logging.error("save hash file error: {}".format(e))
+
 
 def verify_hash(file_path, hash_file_path, hash_algorithm='sha256'):
     """Verify if the hash of the file matches the provided hash value."""
