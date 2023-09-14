@@ -57,14 +57,13 @@ type FunctionChainResult struct {
 	IrResult ImageRecognitionResult `json:"ir_result"`
 }
 
-func function_chain(index int, forceRemote bool, useMem bool) FunctionChainResult {
+func function_chain(index int, bucket string, source string, forceRemote bool, useMem bool) FunctionChainResult {
 	fmt.Println("function_chain", index, "start")
 
 	// ==================== function ====================
-	source := "larger_image"
-	intermediate := fmt.Sprintf("larger_image_%d-scaled", index)
+	intermediate := fmt.Sprintf("%s_%d-scaled", source, index)
 	start := time.Now()
-	is_result := function_image_scale(source, intermediate, forceRemote, useMem)
+	is_result := function_image_scale(bucket, source, intermediate, forceRemote, useMem)
 	// time.Sleep(10 * time.Second)
 	ir_result := function_image_recognition(intermediate, forceRemote, useMem)
 	duration := time.Since(start)
@@ -74,11 +73,11 @@ func function_chain(index int, forceRemote bool, useMem bool) FunctionChainResul
 	return FunctionChainResult{int64(start.UnixMicro()), duration.Seconds(), is_result, ir_result}
 }
 
-func function_image_scale(source string, destination string, forceRemote bool, useMem bool) ImageScaleResult {
+func function_image_scale(bucket string, source string, destination string, forceRemote bool, useMem bool) ImageScaleResult {
 	var req_data ImageScaleRequest
 	var res_data ImageScaleResponse
 
-	req_data.Bucket = "stress-benchmark"
+	req_data.Bucket = bucket
 	req_data.Source = source
 	req_data.Destination = destination
 	req_data.ForceRemote = forceRemote

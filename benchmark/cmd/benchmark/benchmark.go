@@ -17,6 +17,8 @@ import (
 
 var (
 	flags struct {
+		Bucket       string  `json:"bucket"`
+		Source       string  `json:"source"`
 		Concurrency  int     `json:"concurrency"`
 		Tasks        int     `json:"tasks"`
 		Distribution string  `json:"distribution"`
@@ -28,6 +30,8 @@ var (
 )
 
 func init() {
+	flag.StringVar(&flags.Bucket, "bucket", "stress-benchmark", "bucket name")
+	flag.StringVar(&flags.Source, "source", "larger_image", "source directory of image: [images, images-old, larger_image]")
 	flag.IntVar(&flags.Concurrency, "concurrency", 2147483647, "number of concurrent tasks")
 	flag.IntVar(&flags.Tasks, "tasks", 10, "number of tasks")
 	flag.StringVar(&flags.Distribution, "distribution", "poisson", "distribution of tasks: [poisson, burst, seq|sequential]")
@@ -67,14 +71,14 @@ func main() {
 
 	// ==================== warm up ====================
 	if flags.Warmup {
-		warmup(flags.Concurrency, flags.Tasks, flags.Distribution, flags.Rate, flags.ForceRemote, flags.UseMem)
+		warmup(flags.Bucket, flags.Source, flags.Concurrency, flags.Tasks, flags.Distribution, flags.Rate, flags.ForceRemote, flags.UseMem)
 	}
 
 	// ==================== benchmark ====================
-	benchmark(flags.Concurrency, flags.Tasks, flags.Distribution, flags.Rate, flags.ForceRemote, flags.UseMem)
+	benchmark(flags.Bucket, flags.Source, flags.Concurrency, flags.Tasks, flags.Distribution, flags.Rate, flags.ForceRemote, flags.UseMem)
 }
 
-func warmup(concurrency int, tasks int, distribution string, rate float64, forceRemote bool, useMem bool) {
+func warmup(bucket string, source string, concurrency int, tasks int, distribution string, rate float64, forceRemote bool, useMem bool) {
 	fmt.Println("warming up")
 
 	wg := new(sync.WaitGroup)
@@ -82,7 +86,7 @@ func warmup(concurrency int, tasks int, distribution string, rate float64, force
 	for i := 0; i < 10; i++ {
 		go func(i int) {
 			defer wg.Done()
-			function_chain(i, forceRemote, useMem)
+			function_chain(i, bucket, source, forceRemote, useMem)
 		}(i)
 	}
 	wg.Wait()
@@ -90,14 +94,14 @@ func warmup(concurrency int, tasks int, distribution string, rate float64, force
 	fmt.Println("warm up done")
 }
 
-func benchmark(concurrency int, tasks int, distribution string, rate float64, forceRemote bool, useMem bool) {
+func benchmark(bucket string, source string, concurrency int, tasks int, distribution string, rate float64, forceRemote bool, useMem bool) {
 	fmt.Println("benchmarking")
 
 	// ==================== benchmark ====================
 	results := make([]FunctionChainResult, tasks)
 
 	invoke := func(i int) {
-		result := function_chain(i, forceRemote, useMem)
+		result := function_chain(i, bucket, source, forceRemote, useMem)
 		results[i] = result
 
 		// logging
