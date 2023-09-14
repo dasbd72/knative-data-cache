@@ -36,5 +36,6 @@ docker build -t johnson684/video-merge:python -f video-merge/Dockerfile .
 docker push johnson684/video-merge:python
 
 kubectl apply -f yamls/apps.yaml
+kubectl apply -f yamls/new-apps.yaml
 kubectl apply -f yamls/manager.yaml
 kubectl apply -f yamls/cache-deleter.yaml
