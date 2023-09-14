@@ -1,0 +1,148 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: video-split
+spec:
+  template:
+    metadata:
+      annotations:
+        # Knative concurrency-based autoscaling (default).
+        autoscaling.knative.dev/class: kpa.autoscaling.knative.dev
+        autoscaling.knative.dev/metric: concurrency
+        # Target 10 requests in-flight per pod.
+        autoscaling.knative.dev/target: "10"
+        # Disable scale to zero with a min scale of 1.
+        autoscaling.knative.dev/min-scale: "1"
+        # Limit scaling to 100 pods.
+        autoscaling.knative.dev/max-scale: "100"
+    spec:
+      containers:
+
+        - image: docker.io/johnson684/video-split:python
+          imagePullPolicy: Always
+          name: video-split
+          volumeMounts:
+            - name: shared-volume
+              mountPath: /shared
+          env:
+            - name: MINIO_ENDPOINT
+              value: 10.121.240.235:9000
+            - name: MINIO_ACCESS_KEY
+              value: LbtKL76UbWedONnd
+            - name: MINIO_SECRET_KEY
+              value: Bt0Omfh0S3ud5VEQAVR85CwinSULl3Sj
+            - name: STORAGE_PATH
+              value: /shared
+            - name: LOG_LEVEL
+              value: INFO
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1280Mi
+            limits:
+              cpu: 4000m
+              memory: 4280Mi
+      volumes:
+        - name: shared-volume
+          persistentVolumeClaim:
+            claimName: shared-volume-claim
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: video-transcode
+spec:
+  template:
+    metadata:
+      annotations:
+        # Knative concurrency-based autoscaling (default).
+        autoscaling.knative.dev/class: kpa.autoscaling.knative.dev
+        autoscaling.knative.dev/metric: concurrency
+        # Target 10 requests in-flight per pod.
+        autoscaling.knative.dev/target: "10"
+        # Disable scale to zero with a min scale of 1.
+        autoscaling.knative.dev/min-scale: "1"
+        # Limit scaling to 100 pods.
+        autoscaling.knative.dev/max-scale: "100"
+    spec:
+      containers:
+
+        - image: docker.io/johnson684/video-transcode:python
+          imagePullPolicy: Always
+          name: video-transcode
+
+          volumeMounts:
+            - name: shared-volume
+              mountPath: /shared
+          env:
+            - name: MINIO_ENDPOINT
+              value: 10.121.240.235:9000
+            - name: MINIO_ACCESS_KEY
+              value: LbtKL76UbWedONnd
+            - name: MINIO_SECRET_KEY
+              value: Bt0Omfh0S3ud5VEQAVR85CwinSULl3Sj
+            - name: STORAGE_PATH
+              value: /shared
+            - name: LOG_LEVEL
+              value: INFO
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1280Mi
+            limits:
+              cpu: 4000m
+              memory: 4280Mi
+      volumes:
+        - name: shared-volume
+          persistentVolumeClaim:
+            claimName: shared-volume-claim
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: video-merge
+spec:
+  template:
+    metadata:
+      annotations:
+        # Knative concurrency-based autoscaling (default).
+        autoscaling.knative.dev/class: kpa.autoscaling.knative.dev
+        autoscaling.knative.dev/metric: concurrency
+        # Target 10 requests in-flight per pod.
+        autoscaling.knative.dev/target: "10"
+        # Disable scale to zero with a min scale of 1.
+        autoscaling.knative.dev/min-scale: "1"
+        # Limit scaling to 100 pods.
+        autoscaling.knative.dev/max-scale: "100"
+    spec:
+      containers:
+
+        - image: docker.io/johnson684/video-merge:python
+          imagePullPolicy: Always
+          name: video-merge
+
+          volumeMounts:
+            - name: shared-volume
+              mountPath: /shared
+          env:
+            - name: MINIO_ENDPOINT
+              value: 10.121.240.235:9000
+            - name: MINIO_ACCESS_KEY
+              value: LbtKL76UbWedONnd
+            - name: MINIO_SECRET_KEY
+              value: Bt0Omfh0S3ud5VEQAVR85CwinSULl3Sj
+            - name: STORAGE_PATH
+              value: /shared
+            - name: LOG_LEVEL
+              value: INFO
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 1280Mi
+            limits:
+              cpu: 4000m
+              memory: 4280Mi
+      volumes:
+        - name: shared-volume
+          persistentVolumeClaim:
+            claimName: shared-volume-claim

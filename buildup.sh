@@ -24,6 +24,17 @@ docker push johnson684/image-scale:python-socket
 docker build -t johnson684/image-recognition:python-socket -f image-recognition/Dockerfile .
 docker push johnson684/image-recognition:python-socket
 
+## new
+
+docker build -t johnson684/video-split:python -f video-split/Dockerfile .
+docker push johnson684/video-split:python
+
+docker build -t johnson684/video-transcode:python -f video-transcode/Dockerfile .
+docker push johnson684/video-transcode:python
+
+docker build -t johnson684/video-merge:python -f video-merge/Dockerfile .
+docker push johnson684/video-merge:python
+
 kubectl apply -f yamls/apps.yaml
 kubectl apply -f yamls/manager.yaml
 kubectl apply -f yamls/cache-deleter.yaml
