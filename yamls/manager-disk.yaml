@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: manager-daemonset
+  name: manager-daemonset-disk
   labels:
-    app.kubernetes.io/name: manager
+    app.kubernetes.io/name: manager-disk
 spec:
   selector:
     matchLabels:
@@ -24,7 +24,6 @@ spec:
           effect: NoSchedule
       containers:
         - name: manager-container
-
           image: johnson684/manager:golang-socket
           imagePullPolicy: Always
           resources:
@@ -35,8 +34,8 @@ spec:
               cpu: 300m
               memory: 400Mi
           ports:
-            - containerPort: 12345
-              hostPort: 12345
+            - containerPort: 12346
+              hostPort: 12346
           volumeMounts:
             - name: shared-volume
               mountPath: /shared
@@ -48,8 +47,8 @@ spec:
                 fieldRef:
                   fieldPath: status.hostIP
             - name: MANAGER_PORT
-              value: "12345"
+              value: "12346"
       volumes:
         - name: shared-volume
           hostPath:
-            path: "/dev/shm"
+            path: /storage-disk

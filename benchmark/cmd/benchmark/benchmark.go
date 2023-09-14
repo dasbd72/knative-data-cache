@@ -17,20 +17,28 @@ import (
 
 var (
 	flags struct {
-		concurrency int
-		tasks       int
-		rate        float64
-		forceRemote bool
-		warmup      bool
+		Bucket       string  `json:"bucket"`
+		Source       string  `json:"source"`
+		Concurrency  int     `json:"concurrency"`
+		Tasks        int     `json:"tasks"`
+		Distribution string  `json:"distribution"`
+		Rate         float64 `json:"rate"`
+		ForceRemote  bool    `json:"force_remote"`
+		Warmup       bool    `json:"warmup"`
+		UseMem       bool    `json:"use_mem"`
 	}
 )
 
 func init() {
-	flag.IntVar(&flags.concurrency, "concurrency", 2147483647, "number of concurrent tasks")
-	flag.IntVar(&flags.tasks, "tasks", 10, "number of tasks")
-	flag.Float64Var(&flags.rate, "rate", 0.5, "rate of poisson process")
-	flag.BoolVar(&flags.forceRemote, "force-remote", false, "force remote")
-	flag.BoolVar(&flags.warmup, "warmup", false, "warmup")
+	flag.StringVar(&flags.Bucket, "bucket", "stress-benchmark", "bucket name")
+	flag.StringVar(&flags.Source, "source", "larger_image", "source directory of image: [images, images-old, larger_image]")
+	flag.IntVar(&flags.Concurrency, "concurrency", 2147483647, "number of concurrent tasks")
+	flag.IntVar(&flags.Tasks, "tasks", 10, "number of tasks")
+	flag.StringVar(&flags.Distribution, "distribution", "poisson", "distribution of tasks: [poisson, burst, seq|sequential]")
+	flag.Float64Var(&flags.Rate, "rate", 0.5, "rate of poisson process")
+	flag.BoolVar(&flags.ForceRemote, "force-remote", false, "force remote")
+	flag.BoolVar(&flags.Warmup, "warmup", false, "warmup")
+	flag.BoolVar(&flags.UseMem, "use-mem", false, "use memory if true, else use disk")
 
 	flag.Parse()
 }
@@ -54,16 +62,23 @@ func main() {
 	// set log output to file
 	log.SetOutput(f)
 
+	// ==================== flags ====================
+	p, err := json.MarshalIndent(flags, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	log.Println("flags:\n", string(p))
+
 	// ==================== warm up ====================
-	if flags.warmup {
-		warmup()
+	if flags.Warmup {
+		warmup(flags.Bucket, flags.Source, flags.Concurrency, flags.Tasks, flags.Distribution, flags.Rate, flags.ForceRemote, flags.UseMem)
 	}
 
 	// ==================== benchmark ====================
-	benchmark(flags.concurrency, flags.tasks, flags.rate, flags.forceRemote)
+	benchmark(flags.Bucket, flags.Source, flags.Concurrency, flags.Tasks, flags.Distribution, flags.Rate, flags.ForceRemote, flags.UseMem)
 }
 
-func warmup() {
+func warmup(bucket string, source string, concurrency int, tasks int, distribution string, rate float64, forceRemote bool, useMem bool) {
 	fmt.Println("warming up")
 
 	wg := new(sync.WaitGroup)
@@ -71,7 +86,7 @@ func warmup() {
 	for i := 0; i < 10; i++ {
 		go func(i int) {
 			defer wg.Done()
-			function_chain(i, true)
+			function_chain(i, bucket, source, forceRemote, useMem)
 		}(i)
 	}
 	wg.Wait()
@@ -79,49 +94,71 @@ func warmup() {
 	fmt.Println("warm up done")
 }
 
-func benchmark(concurrency int, tasks int, rate float64, forceRemote bool) {
+func benchmark(bucket string, source string, concurrency int, tasks int, distribution string, rate float64, forceRemote bool, useMem bool) {
 	fmt.Println("benchmarking")
 
 	// ==================== benchmark ====================
-	ctx := context.TODO()
-	sem_cc := semaphore.NewWeighted(int64(concurrency))
-
 	results := make([]FunctionChainResult, tasks)
 
-	start := time.Now()
-	for i := 0; i < tasks; i++ {
-		// poisson process interval
-		x := -math.Log(1.0-rand.Float64()) / rate
+	invoke := func(i int) {
+		result := function_chain(i, bucket, source, forceRemote, useMem)
+		results[i] = result
 
-		// wait for concurrency control
-		if err := sem_cc.Acquire(ctx, 1); err != nil {
-			panic(err)
+		// logging
+		p, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			panic(
+				fmt.Sprintf(
+					"index: %d, error: %s",
+					i,
+					err.Error(),
+				),
+			)
 		}
-
-		// function invocation
-		go func(i int) {
-			defer sem_cc.Release(1)
-
-			result := function_chain(i, forceRemote)
-			results[i] = result
-
-			// logging
-			p, err := json.MarshalIndent(result, "", "  ")
-			if err != nil {
-				panic(
-					fmt.Sprintf(
-						"index: %d, error: %s",
-						i,
-						err.Error(),
-					),
-				)
-			}
-			log.Println("index:", i, "\n", string(p))
-		}(i)
-		// sleep
-		time.Sleep(time.Duration(x) * time.Second)
+		log.Println("index:", i, "\n", string(p))
 	}
-	sem_cc.Acquire(ctx, int64(concurrency))
+
+	start := time.Now()
+
+	switch distribution {
+	case "poisson":
+		ctx := context.TODO()
+		sem_cc := semaphore.NewWeighted(int64(concurrency))
+
+		for i := 0; i < tasks; i++ {
+			// poisson process interval
+			x := -math.Log(1.0-rand.Float64()) / rate
+
+			// wait for concurrency control
+			if err := sem_cc.Acquire(ctx, 1); err != nil {
+				panic(err)
+			}
+
+			// function invocation
+			go func(i int) {
+				defer sem_cc.Release(1)
+				invoke(i)
+			}(i)
+
+			// sleep
+			time.Sleep(time.Duration(x) * time.Second)
+		}
+		sem_cc.Acquire(ctx, int64(concurrency))
+
+	case "burst":
+		for i := 0; i < tasks; i++ {
+			go invoke(i)
+		}
+	case "seq":
+		fallthrough
+	case "sequential":
+		for i := 0; i < tasks; i++ {
+			invoke(i)
+		}
+	default:
+		panic("invalid distribution")
+	}
+
 	duration := time.Since(start)
 
 	// ==================== log ====================

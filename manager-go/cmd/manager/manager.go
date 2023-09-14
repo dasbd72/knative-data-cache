@@ -25,6 +25,7 @@ type Response struct {
 var (
 	storagePath string
 	hostIP      string
+	managerPort string
 )
 
 func init() {
@@ -33,12 +34,14 @@ func init() {
 
 	// read host ip from environment variable
 	hostIP = os.Getenv("HOST_IP")
+	managerPort = os.Getenv("MANAGER_PORT")
 	// write manager ip to storage
 	f, err := os.Create(storagePath + "/MANAGER_IP")
 	if err != nil {
 		panic(err)
 	}
 	log.Println("HOST IP: " + hostIP)
+	log.Println("MANAGER PORT: " + managerPort)
 	f.WriteString(hostIP)
 	f.Close()
 }
@@ -49,13 +52,13 @@ func main() {
 }
 
 func handleConnections() {
-	listener, err := net.Listen("tcp", ":12345")
+	listener, err := net.Listen("tcp", ":"+managerPort)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer listener.Close()
 
-	log.Println("Manager is running on " + hostIP + ":12345")
+	log.Println("Manager is running on " + hostIP + ":" + managerPort)
 
 	for {
 		conn, err := listener.Accept()

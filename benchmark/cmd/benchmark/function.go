@@ -57,16 +57,15 @@ type FunctionChainResult struct {
 	IrResult ImageRecognitionResult `json:"ir_result"`
 }
 
-func function_chain(index int, forceRemote bool) FunctionChainResult {
+func function_chain(index int, bucket string, source string, forceRemote bool, useMem bool) FunctionChainResult {
 	fmt.Println("function_chain", index, "start")
 
 	// ==================== function ====================
-	source := "larger_image"
-	intermediate := fmt.Sprintf("larger_image_%d-scaled", index)
+	intermediate := fmt.Sprintf("%s_%d-scaled", source, index)
 	start := time.Now()
-	is_result := function_image_scale(source, intermediate, forceRemote)
+	is_result := function_image_scale(bucket, source, intermediate, forceRemote, useMem)
 	// time.Sleep(10 * time.Second)
-	ir_result := function_image_recognition(intermediate, forceRemote)
+	ir_result := function_image_recognition(intermediate, forceRemote, useMem)
 	duration := time.Since(start)
 
 	fmt.Println("function_chain", index, "end")
@@ -74,11 +73,11 @@ func function_chain(index int, forceRemote bool) FunctionChainResult {
 	return FunctionChainResult{int64(start.UnixMicro()), duration.Seconds(), is_result, ir_result}
 }
 
-func function_image_scale(source string, destination string, forceRemote bool) ImageScaleResult {
+func function_image_scale(bucket string, source string, destination string, forceRemote bool, useMem bool) ImageScaleResult {
 	var req_data ImageScaleRequest
 	var res_data ImageScaleResponse
 
-	req_data.Bucket = "stress-benchmark"
+	req_data.Bucket = bucket
 	req_data.Source = source
 	req_data.Destination = destination
 	req_data.ForceRemote = forceRemote
@@ -91,7 +90,11 @@ func function_image_scale(source string, destination string, forceRemote bool) I
 	}
 
 	start := time.Now()
-	res, err := http.Post("http://image-scale.default.127.0.0.1.sslip.io", "application/json", req)
+	url := "http://image-scale.default.127.0.0.1.sslip.io"
+	if !useMem {
+		url = "http://image-scale-disk.default.127.0.0.1.sslip.io"
+	}
+	res, err := http.Post(url, "application/json", req)
 	if err != nil {
 		panic(err)
 	}
@@ -109,7 +112,7 @@ func function_image_scale(source string, destination string, forceRemote bool) I
 	return ImageScaleResult{duration.Seconds(), res_data}
 }
 
-func function_image_recognition(source string, forceRemote bool) ImageRecognitionResult {
+func function_image_recognition(source string, forceRemote bool, useMem bool) ImageRecognitionResult {
 	var req_data ImageRecognitionRequest
 	var res_data ImageRecognitionResponse
 
@@ -125,7 +128,11 @@ func function_image_recognition(source string, forceRemote bool) ImageRecognitio
 	}
 
 	start := time.Now()
-	res, err := http.Post("http://image-recognition.default.127.0.0.1.sslip.io", "application/json", req)
+	url := "http://image-recognition.default.127.0.0.1.sslip.io"
+	if !useMem {
+		url = "http://image-recognition-disk.default.127.0.0.1.sslip.io"
+	}
+	res, err := http.Post(url, "application/json", req)
 	if err != nil {
 		panic(err)
 	}

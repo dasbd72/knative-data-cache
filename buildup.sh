@@ -1,8 +1,4 @@
 #!/bin/bash
-kubectl delete -f yamls/apps.yaml
-kubectl delete -f yamls/manager.yaml
-kubectl delete -f yamls/cache-deleter.yaml
-
 docker rmi johnson684/manager:golang-socket -f
 docker rmi johnson684/image-scale:python-socket -f
 docker rmi johnson684/image-recognition:python-socket -f
@@ -24,6 +20,19 @@ docker push johnson684/image-scale:python-socket
 docker build -t johnson684/image-recognition:python-socket -f image-recognition/Dockerfile .
 docker push johnson684/image-recognition:python-socket
 
+
+# pv
+kubectl apply -f yamls/pv.yaml
+kubectl apply -f yamls/pvc.yaml
+
+kubectl apply -f yamls/pv-disk.yaml
+kubectl apply -f yamls/pvc-disk.yaml
+
+# memory storage
+kubectl delete -f yamls/apps.yaml
+kubectl delete -f yamls/manager.yaml
+kubectl delete -f yamls/cache-deleter.yaml
+
 ## new
 
 docker build -t johnson684/video-split:python -f video-split/Dockerfile .
@@ -35,7 +44,17 @@ docker push johnson684/video-transcode:python
 docker build -t johnson684/video-merge:python -f video-merge/Dockerfile .
 docker push johnson684/video-merge:python
 
+
 kubectl apply -f yamls/apps.yaml
 kubectl apply -f yamls/new-apps.yaml
 kubectl apply -f yamls/manager.yaml
 kubectl apply -f yamls/cache-deleter.yaml
+
+# disk storage
+kubectl delete -f yamls/apps-disk.yaml
+kubectl delete -f yamls/manager-disk.yaml
+kubectl delete -f yamls/cache-deleter-disk.yaml
+
+kubectl apply -f yamls/apps-disk.yaml
+kubectl apply -f yamls/manager-disk.yaml
+kubectl apply -f yamls/cache-deleter-disk.yaml
