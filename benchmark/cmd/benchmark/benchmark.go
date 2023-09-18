@@ -16,18 +16,7 @@ import (
 )
 
 var (
-	flags struct {
-		Bucket       string  `json:"bucket"`
-		Source       string  `json:"source"`
-		Concurrency  int     `json:"concurrency"`
-		Tasks        int     `json:"tasks"`
-		Distribution string  `json:"distribution"`
-		Rate         float64 `json:"rate"`
-		ForceRemote  bool    `json:"force_remote"`
-		Warmup       bool    `json:"warmup"`
-		UseMem       bool    `json:"use_mem"`
-		WorkflowType string  `json:"workflow_type"`
-	}
+	flags Flags
 )
 
 func init() {
@@ -164,60 +153,7 @@ func benchmark(bucket string, source string, concurrency int, tasks int, distrib
 	duration := time.Since(start)
 
 	// ==================== log ====================
-	var benchmark_result struct {
-		Duration      float64 `json:"duration"`
-		TotalDuration float64 `json:"total_duration"`
-
-		AverageDuration float64 `json:"average_duration"`
-
-		TotalIsDuration         float64 `json:"total_is_duration"`
-		TotalIsCodeDuration     float64 `json:"total_is_code_duration"`
-		TotalIsDownloadDuration float64 `json:"total_is_download_duration"`
-		TotalIsUploadDuration   float64 `json:"total_is_upload_duration"`
-
-		AverageIsDuration         float64 `json:"average_is_duration"`
-		AverageIsCodeDuration     float64 `json:"average_is_code_duration"`
-		AverageIsDownloadDuration float64 `json:"average_is_download_duration"`
-		AverageIsUploadDuration   float64 `json:"average_is_upload_duration"`
-
-		TotalIrDuration         float64 `json:"total_ir_duration"`
-		TotalIrCodeDuration     float64 `json:"total_ir_code_duration"`
-		TotalIrDownloadDuration float64 `json:"total_ir_download_duration"`
-
-		AverageIrDuration         float64 `json:"average_ir_duration"`
-		AverageIrCodeDuration     float64 `json:"average_ir_code_duration"`
-		AverageIrDownloadDuration float64 `json:"average_ir_download_duration"`
-
-		TotalVsDuration         float64 `json:"total_vs_duration"`
-		TotalVsCodeDuration     float64 `json:"total_vs_code_duration"`
-		TotalVsDownloadDuration float64 `json:"total_vs_download_duration"`
-		TotalVsUploadDuration   float64 `json:"total_vs_upload_duration"`
-
-		AverageVsDuration         float64 `json:"average_vs_duration"`
-		AverageVsCodeDuration     float64 `json:"average_vs_code_duration"`
-		AverageVsDownloadDuration float64 `json:"average_vs_download_duration"`
-		AverageVsUploadDuration   float64 `json:"average_vs_upload_duration"`
-
-		TotalVtDuration         float64 `json:"total_vt_duration"`
-		TotalVtCodeDuration     float64 `json:"total_vt_code_duration"`
-		TotalVtDownloadDuration float64 `json:"total_vt_download_duration"`
-		TotalVtUploadDuration   float64 `json:"total_vt_upload_duration"`
-
-		AverageVtDuration         float64 `json:"average_vt_duration"`
-		AverageVtCodeDuration     float64 `json:"average_vt_code_duration"`
-		AverageVtDownloadDuration float64 `json:"average_vt_download_duration"`
-		AverageVtUploadDuration   float64 `json:"average_vt_upload_duration"`
-
-		TotalVmDuration         float64 `json:"total_vm_duration"`
-		TotalVmCodeDuration     float64 `json:"total_vm_code_duration"`
-		TotalVmDownloadDuration float64 `json:"total_vm_download_duration"`
-		TotalVmUploadDuration   float64 `json:"total_vm_upload_duration"`
-
-		AverageVmDuration         float64 `json:"average_vm_duration"`
-		AverageVmCodeDuration     float64 `json:"average_vm_code_duration"`
-		AverageVmDownloadDuration float64 `json:"average_vm_download_duration"`
-		AverageVmUploadDuration   float64 `json:"average_vm_upload_duration"`
-	}
+	var benchmark_result BenchmarkResult
 
 	// ==================== result ====================
 	benchmark_result.Duration = duration.Seconds()
