@@ -1,3 +1,6 @@
 #!/bin/bash
 go mod download
-go run cmd/benchmark/* -tasks 5 -distribution seq 
+
+# VideoProcessing
+go run cmd/benchmark/* -bucket video-processing -source original-video -tasks 1 -distribution seq -workflow-type VideoProcessing -force-remote
+go run cmd/benchmark/* -bucket video-processing -source original-video -tasks 1 -distribution seq -workflow-type VideoProcessing

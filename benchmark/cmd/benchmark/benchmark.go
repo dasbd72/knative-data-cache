@@ -151,11 +151,10 @@ func benchmark(bucket string, source string, concurrency int, tasks int, distrib
 	}
 
 	duration := time.Since(start)
+	// ==================== benchmark done ====================
 
-	// ==================== log ====================
 	var benchmark_result BenchmarkResult
 
-	// ==================== result ====================
 	benchmark_result.Duration = duration.Seconds()
 
 	for _, result := range results {
