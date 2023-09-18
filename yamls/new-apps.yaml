@@ -45,7 +45,7 @@ spec:
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
-            claimName: shared-volume-claim
+            claimName: shared-volume-claim-disk
 ---
 apiVersion: serving.knative.dev/v1
 kind: Service
@@ -95,7 +95,7 @@ spec:
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
-            claimName: shared-volume-claim
+            claimName: shared-volume-claim-disk
 ---
 apiVersion: serving.knative.dev/v1
 kind: Service
@@ -145,4 +145,4 @@ spec:
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
-            claimName: shared-volume-claim
+            claimName: shared-volume-claim-disk

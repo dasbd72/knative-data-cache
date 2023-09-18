@@ -1,2 +1,0 @@
-file 'seg1_sample.avi'
-file 'seg1_sample.avi'

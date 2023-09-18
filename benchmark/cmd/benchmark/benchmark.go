@@ -26,19 +26,21 @@ var (
 		ForceRemote  bool    `json:"force_remote"`
 		Warmup       bool    `json:"warmup"`
 		UseMem       bool    `json:"use_mem"`
+		WorkflowType string  `json:"workflow_type"`
 	}
 )
 
 func init() {
 	flag.StringVar(&flags.Bucket, "bucket", "stress-benchmark", "bucket name")
-	flag.StringVar(&flags.Source, "source", "larger_image", "source directory of image: [images, images-old, larger_image]")
+	flag.StringVar(&flags.Source, "source", "larger_image", "source directory: [images, images-old, larger_image]")
 	flag.IntVar(&flags.Concurrency, "concurrency", 2147483647, "number of concurrent tasks")
-	flag.IntVar(&flags.Tasks, "tasks", 10, "number of tasks")
+	flag.IntVar(&flags.Tasks, "tasks", 5, "number of tasks")
 	flag.StringVar(&flags.Distribution, "distribution", "poisson", "distribution of tasks: [poisson, burst, seq|sequential]")
 	flag.Float64Var(&flags.Rate, "rate", 0.5, "rate of poisson process")
 	flag.BoolVar(&flags.ForceRemote, "force-remote", false, "force remote")
 	flag.BoolVar(&flags.Warmup, "warmup", false, "warmup")
 	flag.BoolVar(&flags.UseMem, "use-mem", false, "use memory if true, else use disk")
+	flag.StringVar(&flags.WorkflowType, "workflow-type", "ImageProcessing", "workflow type")
 
 	flag.Parse()
 }
@@ -71,14 +73,14 @@ func main() {
 
 	// ==================== warm up ====================
 	if flags.Warmup {
-		warmup(flags.Bucket, flags.Source, flags.Concurrency, flags.Tasks, flags.Distribution, flags.Rate, flags.ForceRemote, flags.UseMem)
+		warmup(flags.Bucket, flags.Source, flags.Concurrency, flags.Tasks, flags.Distribution, flags.Rate, flags.ForceRemote, flags.UseMem, flags.WorkflowType)
 	}
 
 	// ==================== benchmark ====================
-	benchmark(flags.Bucket, flags.Source, flags.Concurrency, flags.Tasks, flags.Distribution, flags.Rate, flags.ForceRemote, flags.UseMem)
+	benchmark(flags.Bucket, flags.Source, flags.Concurrency, flags.Tasks, flags.Distribution, flags.Rate, flags.ForceRemote, flags.UseMem, flags.WorkflowType)
 }
 
-func warmup(bucket string, source string, concurrency int, tasks int, distribution string, rate float64, forceRemote bool, useMem bool) {
+func warmup(bucket string, source string, concurrency int, tasks int, distribution string, rate float64, forceRemote bool, useMem bool, workflowType string) {
 	fmt.Println("warming up")
 
 	wg := new(sync.WaitGroup)
@@ -86,7 +88,7 @@ func warmup(bucket string, source string, concurrency int, tasks int, distributi
 	for i := 0; i < 10; i++ {
 		go func(i int) {
 			defer wg.Done()
-			function_chain(i, bucket, source, forceRemote, useMem)
+			function_chain(i, bucket, source, forceRemote, useMem, workflowType)
 		}(i)
 	}
 	wg.Wait()
@@ -94,14 +96,14 @@ func warmup(bucket string, source string, concurrency int, tasks int, distributi
 	fmt.Println("warm up done")
 }
 
-func benchmark(bucket string, source string, concurrency int, tasks int, distribution string, rate float64, forceRemote bool, useMem bool) {
+func benchmark(bucket string, source string, concurrency int, tasks int, distribution string, rate float64, forceRemote bool, useMem bool, workflowType string) {
 	fmt.Println("benchmarking")
 
 	// ==================== benchmark ====================
 	results := make([]FunctionChainResult, tasks)
 
 	invoke := func(i int) {
-		result := function_chain(i, bucket, source, forceRemote, useMem)
+		result := function_chain(i, bucket, source, forceRemote, useMem, workflowType)
 		results[i] = result
 
 		// logging
@@ -185,6 +187,36 @@ func benchmark(bucket string, source string, concurrency int, tasks int, distrib
 		AverageIrDuration         float64 `json:"average_ir_duration"`
 		AverageIrCodeDuration     float64 `json:"average_ir_code_duration"`
 		AverageIrDownloadDuration float64 `json:"average_ir_download_duration"`
+
+		TotalVsDuration         float64 `json:"total_vs_duration"`
+		TotalVsCodeDuration     float64 `json:"total_vs_code_duration"`
+		TotalVsDownloadDuration float64 `json:"total_vs_download_duration"`
+		TotalVsUploadDuration   float64 `json:"total_vs_upload_duration"`
+
+		AverageVsDuration         float64 `json:"average_vs_duration"`
+		AverageVsCodeDuration     float64 `json:"average_vs_code_duration"`
+		AverageVsDownloadDuration float64 `json:"average_vs_download_duration"`
+		AverageVsUploadDuration   float64 `json:"average_vs_upload_duration"`
+
+		TotalVtDuration         float64 `json:"total_vt_duration"`
+		TotalVtCodeDuration     float64 `json:"total_vt_code_duration"`
+		TotalVtDownloadDuration float64 `json:"total_vt_download_duration"`
+		TotalVtUploadDuration   float64 `json:"total_vt_upload_duration"`
+
+		AverageVtDuration         float64 `json:"average_vt_duration"`
+		AverageVtCodeDuration     float64 `json:"average_vt_code_duration"`
+		AverageVtDownloadDuration float64 `json:"average_vt_download_duration"`
+		AverageVtUploadDuration   float64 `json:"average_vt_upload_duration"`
+
+		TotalVmDuration         float64 `json:"total_vm_duration"`
+		TotalVmCodeDuration     float64 `json:"total_vm_code_duration"`
+		TotalVmDownloadDuration float64 `json:"total_vm_download_duration"`
+		TotalVmUploadDuration   float64 `json:"total_vm_upload_duration"`
+
+		AverageVmDuration         float64 `json:"average_vm_duration"`
+		AverageVmCodeDuration     float64 `json:"average_vm_code_duration"`
+		AverageVmDownloadDuration float64 `json:"average_vm_download_duration"`
+		AverageVmUploadDuration   float64 `json:"average_vm_upload_duration"`
 	}
 
 	// ==================== result ====================
@@ -201,6 +233,21 @@ func benchmark(bucket string, source string, concurrency int, tasks int, distrib
 		benchmark_result.TotalIrDuration += result.IrResult.Duration
 		benchmark_result.TotalIrCodeDuration += result.IrResult.Response.CodeDuration
 		benchmark_result.TotalIrDownloadDuration += result.IrResult.Response.DownloadDuration
+
+		benchmark_result.TotalVsDuration += result.VsResult.Duration
+		benchmark_result.TotalVsCodeDuration += result.VsResult.Response.CodeDuration
+		benchmark_result.TotalVsDownloadDuration += result.VsResult.Response.DownloadDuration
+		benchmark_result.TotalVsUploadDuration += result.VsResult.Response.UploadDuration
+
+		benchmark_result.TotalVtDuration += result.VtResult.Duration
+		benchmark_result.TotalVtCodeDuration += result.VtResult.Response.CodeDuration
+		benchmark_result.TotalVtDownloadDuration += result.VtResult.Response.DownloadDuration
+		benchmark_result.TotalVtUploadDuration += result.VtResult.Response.UploadDuration
+
+		benchmark_result.TotalVmDuration += result.VmResult.Duration
+		benchmark_result.TotalVmCodeDuration += result.VmResult.Response.CodeDuration
+		benchmark_result.TotalVmDownloadDuration += result.VmResult.Response.DownloadDuration
+		benchmark_result.TotalVmUploadDuration += result.VmResult.Response.UploadDuration
 	}
 	benchmark_result.AverageDuration = benchmark_result.TotalDuration / float64(tasks)
 
@@ -212,6 +259,21 @@ func benchmark(bucket string, source string, concurrency int, tasks int, distrib
 	benchmark_result.AverageIrDuration = benchmark_result.TotalIrDuration / float64(tasks)
 	benchmark_result.AverageIrCodeDuration = benchmark_result.TotalIrCodeDuration / float64(tasks)
 	benchmark_result.AverageIrDownloadDuration = benchmark_result.TotalIrDownloadDuration / float64(tasks)
+
+	benchmark_result.AverageVsDuration = benchmark_result.TotalVsDuration / float64(tasks)
+	benchmark_result.AverageVsCodeDuration = benchmark_result.TotalVsCodeDuration / float64(tasks)
+	benchmark_result.AverageVsDownloadDuration = benchmark_result.TotalVsDownloadDuration / float64(tasks)
+	benchmark_result.AverageVsUploadDuration = benchmark_result.TotalVsUploadDuration / float64(tasks)
+
+	benchmark_result.AverageVtDuration = benchmark_result.TotalVtDuration / float64(tasks)
+	benchmark_result.AverageVtCodeDuration = benchmark_result.TotalVtCodeDuration / float64(tasks)
+	benchmark_result.AverageVtDownloadDuration = benchmark_result.TotalVtDownloadDuration / float64(tasks)
+	benchmark_result.AverageVtUploadDuration = benchmark_result.TotalVtUploadDuration / float64(tasks)
+
+	benchmark_result.AverageVmDuration = benchmark_result.TotalVmDuration / float64(tasks)
+	benchmark_result.AverageVmCodeDuration = benchmark_result.TotalVmCodeDuration / float64(tasks)
+	benchmark_result.AverageVmDownloadDuration = benchmark_result.TotalVmDownloadDuration / float64(tasks)
+	benchmark_result.AverageVmUploadDuration = benchmark_result.TotalVmUploadDuration / float64(tasks)
 
 	p, err := json.MarshalIndent(benchmark_result, "", "  ")
 	if err != nil {
