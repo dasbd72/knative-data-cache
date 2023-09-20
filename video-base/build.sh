@@ -1,0 +1,1 @@
+docker build -t dasbd72/video-base:latest -f video-base/Dockerfile .
