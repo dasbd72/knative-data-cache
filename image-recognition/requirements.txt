@@ -2,4 +2,4 @@ flask
 minio
 pillow
 psutil
-python-etcd
+etcd3
