@@ -29,7 +29,9 @@ def downloadVideo(minio_client: Minio, bucket_name, remote_path, local_path):
 def uploadVideo(minio_client: Minio, bucket_name, local_path, remote_path):
     for filename in os.listdir(local_path):
         filepath = os.path.join(local_path, filename)
+        print("Trying to upload transcoded file")
         minio_client.fput_object(bucket_name, remote_path + filename, filepath)
+        print("Successfully upload transcoded file")
     return
 
 

@@ -1,0 +1,6 @@
+flask
+minio
+pillow
+requests
+psutil
+moviepy
