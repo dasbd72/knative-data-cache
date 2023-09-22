@@ -20,8 +20,6 @@ var (
 )
 
 func init() {
-	// flag.StringVar(&flags.Bucket, "bucket", "stress-benchmark", "bucket name")
-	// flag.StringVar(&flags.Source, "source", "larger-image", "source directory: [images, images-old, larger_image]")
 	flag.IntVar(&flags.Concurrency, "concurrency", 2147483647, "number of concurrent tasks")
 	flag.IntVar(&flags.Tasks, "tasks", 5, "number of tasks")
 	flag.StringVar(&flags.Distribution, "distribution", "poisson", "distribution of tasks: [poisson, burst, seq|sequential]")
