@@ -3,4 +3,4 @@ minio
 pillow
 requests
 psutil
-python-etcd
+etcd3
