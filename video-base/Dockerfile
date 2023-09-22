@@ -5,6 +5,6 @@ FROM python:3.10-slim AS release
 ENV PYTHONUNBUFFERED True
 
 WORKDIR /python
-COPY video-base/. ./
+COPY . ./
 RUN pip install -r requirements.txt
 RUN apt-get update && apt-get install -y ffmpeg

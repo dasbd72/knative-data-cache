@@ -7,7 +7,6 @@ ENV PYTHONUNBUFFERED True
 WORKDIR /app
 COPY video-merge/. ./
 COPY pkg/wrapper.py ./
-RUN pip install -r requirements.txt
 EXPOSE 8080
 
 ENTRYPOINT [ "python", "video-merge.py" ]

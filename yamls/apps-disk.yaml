@@ -36,6 +36,8 @@ spec:
               value: INFO
             - name: MANAGER_PORT
               value: "12346"
+            - name: NODE_IP
+              value: 0.0.0.0
           resources:
             requests:
               cpu: 1000m
