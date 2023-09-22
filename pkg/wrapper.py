@@ -12,60 +12,60 @@ import hashlib
 logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")), format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s')
 
 
-class Manager:
-    def __init__(self, endpoint) -> None:
-        self.exist = False
-        self.endpoint: str = endpoint
-        self.connection: socket.socket = None
+# class Manager:
+#     def __init__(self, endpoint) -> None:
+#         self.exist = False
+#         self.endpoint: str = endpoint
+#         self.connection: socket.socket = None
 
-        if "STORAGE_PATH" in os.environ.keys():
-            self.storage_path = os.environ["STORAGE_PATH"]
-        else:
-            self.storage_path = None
-        logging.info(f"STORAGE_PATH: {self.storage_path}")
+#         if "STORAGE_PATH" in os.environ.keys():
+#             self.storage_path = os.environ["STORAGE_PATH"]
+#         else:
+#             self.storage_path = None
+#         logging.info(f"STORAGE_PATH: {self.storage_path}")
 
-        if os.path.exists(os.path.join(self.storage_path, "MANAGER_IP")):
-            with open(os.path.join(self.storage_path, "MANAGER_IP"), "r") as f:
-                self.manager_ip = f.read()
-        else:
-            self.manager_ip = None
+#         if os.path.exists(os.path.join(self.storage_path, "MANAGER_IP")):
+#             with open(os.path.join(self.storage_path, "MANAGER_IP"), "r") as f:
+#                 self.manager_ip = f.read()
+#         else:
+#             self.manager_ip = None
 
-        self.manager_port = os.environ.get("MANAGER_PORT")
+#         self.manager_port = os.environ.get("MANAGER_PORT")
 
-        if self.storage_path is not None and self.manager_ip is not None and self.manager_port is not None:
-            self.exist = True
-        logging.info(f"MANAGER: {self.manager_ip}:{self.manager_port}")
+#         if self.storage_path is not None and self.manager_ip is not None and self.manager_port is not None:
+#             self.exist = True
+#         logging.info(f"MANAGER: {self.manager_ip}:{self.manager_port}")
 
-        try:
-            self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.connection.connect((self.manager_ip, self.manager_port))
-        except:
-            logging.error("connection failed")
-            self.exist = False
+#         try:
+#             self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#             self.connection.connect((self.manager_ip, self.manager_port))
+#         except:
+#             logging.error("connection failed")
+#             self.exist = False
 
-    def close(self) -> None:
-        if self.connection is not None:
-            self.connection.close()
+#     def close(self) -> None:
+#         if self.connection is not None:
+#             self.connection.close()
 
-    def send_recv(self, data: str, bufsize: int = 128) -> str:
-        if self.connection is None:
-            logging.error("connection is None")
-            return "{}"
-        try:
-            # Send data
-            self.connection.send(data.encode("utf-8"))
+#     def send_recv(self, data: str, bufsize: int = 128) -> str:
+#         if self.connection is None:
+#             logging.error("connection is None")
+#             return "{}"
+#         try:
+#             # Send data
+#             self.connection.send(data.encode("utf-8"))
 
-            # Receive data
-            result = self.connection.recv(bufsize).decode("utf-8")
-        except:
-            logging.error("send_recv failed")
-            return "{}"
-        else:
-            result = json.JSONDecoder().decode(result)
-            if "success" in result.keys() and result["success"]:
-                return result["body"]
-            else:
-                return "{}"
+#             # Receive data
+#             result = self.connection.recv(bufsize).decode("utf-8")
+#         except:
+#             logging.error("send_recv failed")
+#             return "{}"
+#         else:
+#             result = json.JSONDecoder().decode(result)
+#             if "success" in result.keys() and result["success"]:
+#                 return result["body"]
+#             else:
+#                 return "{}"
 
 
 class MinioWrapper(Minio):
@@ -93,6 +93,7 @@ class MinioWrapper(Minio):
             http_client,
             credentials,
         )
+        logging.info("\n\nMinioWrapper init\n\n")
 
         self.endpoint: str = endpoint
         self.force_remote: bool = force_remote
@@ -117,33 +118,40 @@ class MinioWrapper(Minio):
         tags=None,
         retention=None,
         legal_hold=False,
+        remote_upload=False,
     ):
-        local_upload = True
-        try:
+        local_dst = self.get_local_path(bucket_name, object_name)
+
+        def copy_to_local():
             if self.force_remote:
-                local_upload = False
                 logging.info("force remote")
+                return False
+
+            if not self.storage_path:
+                logging.info("no storage path")
+                return False
 
             # TODO: use a better way to check whether to copy to local
-            disk_usage = psutil.disk_usage(self.storage_path)
-            if disk_usage.free < os.path.getsize(file_path) * 2:
-                local_upload = False
+            if psutil.disk_usage(self.storage_path).free < os.path.getsize(file_path) * 2:
                 logging.info("disk is full")
+                return False
 
-        except Exception as e:
-            logging.error("{}".format(e))
+            try:
+                logging.info("fput_object local {}".format(local_dst))
 
-        try:
-            if local_upload:
-                # copy to local
-                try:
-                    dst = self.get_local_path(bucket_name, object_name)
-                    logging.info("fput_object local {}".format(dst))
-                    os.makedirs(os.path.dirname(dst), exist_ok=True)
-                    shutil.copy(file_path, dst)
-                    save_hash_to_file(calculate_hash(dst), self.get_hash_file_path(dst))
-                except Exception as e:
-                    logging.error("fput_object local {}".format(e))
+                os.makedirs(os.path.dirname(local_dst), exist_ok=True)
+                shutil.copy(file_path, local_dst)
+
+                save_hash_to_file(calculate_hash(local_dst), self.get_hash_file_path(local_dst))
+
+                return True
+            except Exception as e:
+                logging.error("fput_object local {} failed: {}".format(object_name, e))
+                return False
+
+        success = copy_to_local()
+
+        if remote_upload or not success:
             logging.info("fput_object {}".format(object_name))
             super().fput_object(
                 bucket_name,
@@ -159,8 +167,6 @@ class MinioWrapper(Minio):
                 retention,
                 legal_hold,
             )
-        except Exception as e:
-            logging.error("fput_object {} failed: {}".format(object_name, e))
 
     def fget_object(
         self,
@@ -173,62 +179,58 @@ class MinioWrapper(Minio):
         extra_query_params=None,
         tmp_file_path=None,
         progress=None,
+        remote_download=False,
     ):
-        local_download = True
-        src = self.get_local_path(bucket_name, object_name)
-        try:
-            if self.force_remote:
-                local_download = False
-                logging.info("force remote")
+        local_src = self.get_local_path(bucket_name, object_name)
 
+        def copy_from_local():
+            if self.force_remote or remote_download:
+                return False
             if not self.storage_path:
-                local_download = False
                 logging.info("no storage path")
-
-            if not os.path.exists(src):
-                local_download = False
+                return False
+            if not os.path.exists(local_src):
                 logging.info("file not exists")
+                return False
 
-        except Exception as e:
-            logging.error("{}".format(e))
-
-        try:
-            if local_download:
-                logging.info("fget_object local {}".format(src))
-                shutil.copy(src, file_path)
-                # print("local download time:",end="") # test
-                # print(time.perf_counter() - local_download_time) # test
-                if not verify_hash(file_path, self.get_hash_file_path(src)):
+            try:
+                logging.info("fget_object local {}".format(local_src))
+                shutil.copy(local_src, file_path)
+                if not verify_hash(file_path, self.get_hash_file_path(local_src)):
                     logging.info("incorrect hash value, file {} is corrupted.".format(object_name))
-                    logging.info("fget_object {}".format(object_name))
-                    super().fget_object(
-                        bucket_name,
-                        object_name,
-                        file_path,
-                        request_headers,
-                        ssec,
-                        version_id,
-                        extra_query_params,
-                        tmp_file_path,
-                        progress,
-                    )
-            else:
-                logging.info("fget_object {}".format(object_name))
-                # remote_download_time = time.perf_counter() # test
-                super().fget_object(
-                    bucket_name,
-                    object_name,
-                    file_path,
-                    request_headers,
-                    ssec,
-                    version_id,
-                    extra_query_params,
-                    tmp_file_path,
-                    progress,
-                )
-                # print("remote download time:",end="") # test
-                # print(time.perf_counter() - remote_download_time) # test
+                    return False
+                return True
+            except Exception as e:
+                logging.error("fget_object local {} failed: {}".format(object_name, e))
+                return False
 
+        def download_from_cluster():
+            # TODO: download with socket connection
+            if self.force_remote or remote_download:
+                return False
+
+            return False
+
+        if copy_from_local():
+            return
+
+        if download_from_cluster():
+            return
+
+        # remote_download or force_remote or copy_from_local and download_from_cluster failed
+        try:
+            logging.info("fget_object {}".format(object_name))
+            super().fget_object(
+                bucket_name,
+                object_name,
+                file_path,
+                request_headers,
+                ssec,
+                version_id,
+                extra_query_params,
+                tmp_file_path,
+                progress,
+            )
         except Exception as e:
             logging.error("fget_object {} failed: {}".format(object_name, e))
 
@@ -247,12 +249,6 @@ class MinioWrapper(Minio):
         except Exception as e:
             logging.error("{}".format(e))
         return hash_file_path
-
-    def get_upload_perf(self):
-        return self.upload_perf
-
-    def get_download_perf(self):
-        return self.download_perf
 
 
 def calculate_hash(file_path, hash_algorithm='sha256', buffer_size=65536):

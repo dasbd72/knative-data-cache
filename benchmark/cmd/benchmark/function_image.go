@@ -8,26 +8,30 @@ import (
 	"time"
 )
 
-func chain_image_processing(index int, bucket string, source string, forceRemote bool, useMem bool) FunctionChainResult {
+func chain_image_processing(index int, flags Flags) FunctionChainResult {
+	bucket := "images-processing"
+	source := "larger-image"
+	object_list := []string{"DSC08867.JPG", "DSC08868.JPG", "DSC08869.JPG", "DSC08870.JPG", "DSC08871.JPG"}
+
 	intermediate := fmt.Sprintf("%s_%d-scaled", source, index)
 
 	start := time.Now()
-	is_result := function_image_scale(bucket, source, intermediate, forceRemote, useMem)
-	ir_result := function_image_recognition(intermediate, forceRemote, useMem)
+	is_result := function_image_scale(bucket, source, object_list, intermediate, flags.ForceRemote, flags.UseMem)
+	ir_result := function_image_recognition(bucket, intermediate, object_list, flags.ForceRemote, flags.UseMem)
 	duration := time.Since(start)
 
 	return FunctionChainResult{int64(start.UnixMicro()), duration.Seconds(), is_result, ir_result, VideoSplitResult{}, VideoTranscodeResult{}, VideoMergeResult{}}
 }
 
-func function_image_scale(bucket string, source string, destination string, forceRemote bool, useMem bool) ImageScaleResult {
-	var req_data ImageScaleRequest
+func function_image_scale(bucket string, source string, object_list []string, destination string, forceRemote bool, useMem bool) ImageScaleResult {
+	var req_data ImageScaleRequest = ImageScaleRequest{
+		Bucket:      bucket,
+		Source:      source,
+		ObjectList:  object_list,
+		Destination: destination,
+		ForceRemote: forceRemote,
+	}
 	var res_data ImageScaleResponse
-
-	req_data.Bucket = bucket
-	req_data.Source = source
-	req_data.Destination = destination
-	req_data.ForceRemote = forceRemote
-	req_data.ForceBackup = false
 
 	req := new(bytes.Buffer)
 	err := json.NewEncoder(req).Encode(req_data)
@@ -58,14 +62,14 @@ func function_image_scale(bucket string, source string, destination string, forc
 	return ImageScaleResult{duration.Seconds(), res_data}
 }
 
-func function_image_recognition(source string, forceRemote bool, useMem bool) ImageRecognitionResult {
-	var req_data ImageRecognitionRequest
+func function_image_recognition(bucket string, source string, object_list []string, forceRemote bool, useMem bool) ImageRecognitionResult {
+	var req_data ImageRecognitionRequest = ImageRecognitionRequest{
+		Bucket:      bucket,
+		Source:      source,
+		ObjectList:  object_list,
+		ForceRemote: forceRemote,
+	}
 	var res_data ImageRecognitionResponse
-
-	req_data.Bucket = "stress-benchmark"
-	req_data.Source = source
-	req_data.ForceRemote = forceRemote
-	req_data.ForceBackup = false
 
 	req := new(bytes.Buffer)
 	err := json.NewEncoder(req).Encode(req_data)
