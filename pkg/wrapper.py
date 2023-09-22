@@ -8,8 +8,12 @@ import socket
 import json
 import psutil
 import hashlib
+import etcd3
 
-logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")), format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s')
+logging.basicConfig(
+    level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")),
+    format="%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s",
+)
 
 
 class Manager:
@@ -32,7 +36,11 @@ class Manager:
 
         self.manager_port = os.environ.get("MANAGER_PORT")
 
-        if self.storage_path is not None and self.manager_ip is not None and self.manager_port is not None:
+        if (
+            self.storage_path is not None
+            and self.manager_ip is not None
+            and self.manager_port is not None
+        ):
             self.exist = True
         logging.info(f"MANAGER: {self.manager_ip}:{self.manager_port}")
 
@@ -96,7 +104,10 @@ class MinioWrapper(Minio):
 
         self.endpoint: str = endpoint
         self.force_remote: bool = force_remote
-
+        try:
+            self.etcd_client = etcd3.client(host="10.121.240.143", port=2379)
+        except Exception as e:
+            logging.error("Initialize etcd fail: {}".format(e))
         if "STORAGE_PATH" in os.environ.keys():
             self.storage_path = os.environ["STORAGE_PATH"]
         else:
@@ -142,6 +153,14 @@ class MinioWrapper(Minio):
                     os.makedirs(os.path.dirname(dst), exist_ok=True)
                     shutil.copy(file_path, dst)
                     save_hash_to_file(calculate_hash(dst), self.get_hash_file_path(dst))
+
+                    self.etcd_client.put(file_path, os.environ.get("NODE_IP"))
+                    logging.info(
+                        "read value from etcd:{}".format(
+                            self.etcd_client.get(file_path)
+                        )
+                    )
+
                 except Exception as e:
                     logging.error("fput_object local {}".format(e))
             logging.info("fput_object {}".format(object_name))
@@ -199,7 +218,11 @@ class MinioWrapper(Minio):
                 # print("local download time:",end="") # test
                 # print(time.perf_counter() - local_download_time) # test
                 if not verify_hash(file_path, self.get_hash_file_path(src)):
-                    logging.info("incorrect hash value, file {} is corrupted.".format(object_name))
+                    logging.info(
+                        "incorrect hash value, file {} is corrupted.".format(
+                            object_name
+                        )
+                    )
                     logging.info("fget_object {}".format(object_name))
                     super().fget_object(
                         bucket_name,
@@ -255,11 +278,11 @@ class MinioWrapper(Minio):
         return self.download_perf
 
 
-def calculate_hash(file_path, hash_algorithm='sha256', buffer_size=65536):
+def calculate_hash(file_path, hash_algorithm="sha256", buffer_size=65536):
     """Calculate the hash of a file."""
     try:
         hash_obj = hashlib.new(hash_algorithm)
-        with open(file_path, 'rb') as file:
+        with open(file_path, "rb") as file:
             while chunk := file.read(buffer_size):
                 hash_obj.update(chunk)
     except Exception as e:
@@ -270,17 +293,17 @@ def calculate_hash(file_path, hash_algorithm='sha256', buffer_size=65536):
 def save_hash_to_file(hash_value, hash_file_path):
     """Save the hash value to a file."""
     try:
-        with open(hash_file_path, 'w') as hash_file:
+        with open(hash_file_path, "w") as hash_file:
             hash_file.write(hash_value)
     except Exception as e:
         logging.error("save hash file error: {}".format(e))
 
 
-def verify_hash(file_path, hash_file_path, hash_algorithm='sha256'):
+def verify_hash(file_path, hash_file_path, hash_algorithm="sha256"):
     """Verify if the hash of the file matches the provided hash value."""
     calculated_hash = calculate_hash(file_path, hash_algorithm)
     verifySuccess = False
-    with open(hash_file_path, 'r') as file:
+    with open(hash_file_path, "r") as file:
         hash_value = file.read()
         verifySuccess = hash_value == calculated_hash
     return verifySuccess
