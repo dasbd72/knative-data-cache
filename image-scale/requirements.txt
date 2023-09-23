@@ -3,3 +3,5 @@ minio
 pillow
 requests
 psutil
+etcd3
+protobuf==3.20.*

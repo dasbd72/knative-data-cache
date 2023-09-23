@@ -6,8 +6,7 @@ ENV PYTHONUNBUFFERED True
 
 WORKDIR /app
 COPY video-transcode/. ./
-COPY pkg/wrapper.py ./
-RUN pip install -r requirements.txt
+COPY pkg/. ./
 EXPOSE 8080
 
 ENTRYPOINT [ "python", "video-transcode.py" ]

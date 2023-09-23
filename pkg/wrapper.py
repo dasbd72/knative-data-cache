@@ -8,8 +8,12 @@ import socket
 import json
 import psutil
 import hashlib
+import etcd3
 
-logging.basicConfig(level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")), format='%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s')
+logging.basicConfig(
+    level=logging.getLevelName(os.environ.get("LOG_LEVEL", "WARNING")),
+    format="%(asctime)s %(filename)s:%(lineno)d %(levelname)s %(message)s",
+)
 
 
 # class Manager:
@@ -97,12 +101,31 @@ class MinioWrapper(Minio):
 
         self.endpoint: str = endpoint
         self.force_remote: bool = force_remote
+        if os.path.exists("ETCD_HOST"):
+            with open("ETCD_HOST", "r") as f:
+                self.etcd_host = f.read()
+        else:
+            self.etcd_host = None
+        logging.info(f"ETCD_HOST: {self.etcd_host}")
+
+        try:
+            self.etcd_client = etcd3.client(host=self.etcd_host, port=2379)
+        except Exception as e:
+            logging.error("Initialize etcd fail: {}".format(e))
 
         if "STORAGE_PATH" in os.environ.keys():
             self.storage_path = os.environ["STORAGE_PATH"]
         else:
             self.storage_path = None
         logging.info(f"STORAGE_PATH: {self.storage_path}")
+
+        # Read data serve ip:port from storage
+        if os.path.exists(os.path.join(self.storage_path, "DATA_SERVE_IP")):
+            with open(os.path.join(self.storage_path, "DATA_SERVE_IP"), "r") as f:
+                self.data_serve_ip = f.read()
+        else:
+            self.data_serve_ip = None
+        logging.info(f"DATA_SERVE_IP: {self.data_serve_ip}")
 
     def fput_object(
         self,
@@ -143,6 +166,13 @@ class MinioWrapper(Minio):
                 shutil.copy(file_path, local_dst)
 
                 save_hash_to_file(calculate_hash(local_dst), self.get_hash_file_path(local_dst))
+
+                self.etcd_client.put(file_path, self.data_serve_ip)
+                logging.info(
+                    "read value from etcd:{}".format(
+                        self.etcd_client.get(file_path)
+                    )
+                )
 
                 return True
             except Exception as e:
@@ -251,11 +281,11 @@ class MinioWrapper(Minio):
         return hash_file_path
 
 
-def calculate_hash(file_path, hash_algorithm='sha256', buffer_size=65536):
+def calculate_hash(file_path, hash_algorithm="sha256", buffer_size=65536):
     """Calculate the hash of a file."""
     try:
         hash_obj = hashlib.new(hash_algorithm)
-        with open(file_path, 'rb') as file:
+        with open(file_path, "rb") as file:
             while chunk := file.read(buffer_size):
                 hash_obj.update(chunk)
     except Exception as e:
@@ -266,17 +296,17 @@ def calculate_hash(file_path, hash_algorithm='sha256', buffer_size=65536):
 def save_hash_to_file(hash_value, hash_file_path):
     """Save the hash value to a file."""
     try:
-        with open(hash_file_path, 'w') as hash_file:
+        with open(hash_file_path, "w") as hash_file:
             hash_file.write(hash_value)
     except Exception as e:
         logging.error("save hash file error: {}".format(e))
 
 
-def verify_hash(file_path, hash_file_path, hash_algorithm='sha256'):
+def verify_hash(file_path, hash_file_path, hash_algorithm="sha256"):
     """Verify if the hash of the file matches the provided hash value."""
     calculated_hash = calculate_hash(file_path, hash_algorithm)
     verifySuccess = False
-    with open(hash_file_path, 'r') as file:
+    with open(hash_file_path, "r") as file:
         hash_value = file.read()
         verifySuccess = hash_value == calculated_hash
     return verifySuccess

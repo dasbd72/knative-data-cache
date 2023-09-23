@@ -1,6 +1,7 @@
 flask
 minio
-pillow
 requests
 psutil
 moviepy
+etcd3
+protobuf==3.20.*
