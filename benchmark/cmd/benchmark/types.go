@@ -1,8 +1,6 @@
 package main
 
 type Flags struct {
-	Bucket       string  `json:"bucket"`
-	Source       string  `json:"source"`
 	Concurrency  int     `json:"concurrency"`
 	Tasks        int     `json:"tasks"`
 	Distribution string  `json:"distribution"`
@@ -70,11 +68,11 @@ type BenchmarkResult struct {
 
 // -----------------------------------------------
 type ImageScaleRequest struct {
-	Bucket      string `json:"bucket"`
-	Source      string `json:"source"`
-	Destination string `json:"destination"`
-	ForceRemote bool   `json:"force_remote"`
-	ForceBackup bool   `json:"force_backup"`
+	Bucket      string   `json:"bucket"`
+	Source      string   `json:"source"`
+	ObjectList  []string `json:"object_list"`
+	Destination string   `json:"destination"`
+	ForceRemote bool     `json:"force_remote"`
 }
 
 type ImageScaleResponse struct {
@@ -86,10 +84,10 @@ type ImageScaleResponse struct {
 }
 
 type ImageRecognitionRequest struct {
-	Bucket      string `json:"bucket"`
-	Source      string `json:"source"`
-	ForceRemote bool   `json:"force_remote"`
-	ForceBackup bool   `json:"force_backup"`
+	Bucket      string   `json:"bucket"`
+	Source      string   `json:"source"`
+	ObjectList  []string `json:"object_list"`
+	ForceRemote bool     `json:"force_remote"`
 }
 
 type ImageRecognitionResponse struct {
@@ -113,10 +111,11 @@ type ImageRecognitionResult struct {
 
 // ---------------------------------------
 type VideoSplitRequest struct {
-	Bucket      string `json:"bucket"`
-	Source      string `json:"source"`
-	Destination string `json:"destination"`
-	ForceRemote bool   `json:"force_remote"`
+	Bucket      string   `json:"bucket"`
+	Source      string   `json:"source"`
+	ObjectList  []string `json:"object_list"`
+	Destination string   `json:"destination"`
+	ForceRemote bool     `json:"force_remote"`
 }
 type VideoSplitResponse struct {
 	ForceRemote      bool    `json:"force_remote"`
@@ -131,10 +130,11 @@ type VideoSplitResult struct {
 }
 
 type VideoTranscodeRequest struct {
-	Bucket      string `json:"bucket"`
-	Source      string `json:"source"`
-	Destination string `json:"destination"`
-	ForceRemote bool   `json:"force_remote"`
+	Bucket      string   `json:"bucket"`
+	Source      string   `json:"source"`
+	ObjectList  []string `json:"object_list"`
+	Destination string   `json:"destination"`
+	ForceRemote bool     `json:"force_remote"`
 }
 type VideoTranscodeResponse struct {
 	ForceRemote       bool    `json:"force_remote"`
@@ -149,10 +149,11 @@ type VideoTranscodeResult struct {
 }
 
 type VideoMergeRequest struct {
-	Bucket      string `json:"bucket"`
-	Source      string `json:"source"`
-	Destination string `json:"destination"`
-	ForceRemote bool   `json:"force_remote"`
+	Bucket      string   `json:"bucket"`
+	Source      string   `json:"source"`
+	ObjectList  []string `json:"object_list"`
+	Destination string   `json:"destination"`
+	ForceRemote bool     `json:"force_remote"`
 }
 type VideoMergeResponse struct {
 	ForceRemote      bool    `json:"force_remote"`

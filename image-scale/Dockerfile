@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED True
 
 WORKDIR /app
 COPY image-scale/. ./
-COPY pkg/wrapper.py ./
+COPY pkg/. ./
 RUN pip install -r requirements.txt
 
 EXPOSE 8080

@@ -35,8 +35,6 @@ spec:
               value: /shared
             - name: LOG_LEVEL
               value: INFO
-            - name: NODE_IP
-              value: 0.0.0.0
           resources:
             requests:
               cpu: 1000m
@@ -87,8 +85,6 @@ spec:
               value: /shared
             - name: LOG_LEVEL
               value: INFO
-            - name: NODE_IP
-              value: 0.0.0.0
           resources:
             requests:
               cpu: 1000m
@@ -139,8 +135,6 @@ spec:
               value: /shared
             - name: LOG_LEVEL
               value: INFO
-            - name: NODE_IP
-              value: 0.0.0.0
           resources:
             requests:
               cpu: 1000m

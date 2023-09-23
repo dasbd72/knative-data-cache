@@ -4,16 +4,16 @@ import (
 	"fmt"
 )
 
-func function_chain(index int, bucket string, source string, forceRemote bool, useMem bool, workflowType string) FunctionChainResult {
+func function_chain(index int, flags Flags) FunctionChainResult {
 	var res FunctionChainResult
 
 	fmt.Println("function_chain", index, "start")
 
-	switch workflowType {
+	switch flags.WorkflowType {
 	case "ImageProcessing":
-		res = chain_image_processing(index, bucket, source, forceRemote, useMem)
+		res = chain_image_processing(index, flags)
 	case "VideoProcessing":
-		res = chain_video_processing(index, bucket, source, forceRemote, useMem)
+		res = chain_video_processing(index, flags)
 	default:
 		fmt.Println("Unknown workflow type.")
 	}

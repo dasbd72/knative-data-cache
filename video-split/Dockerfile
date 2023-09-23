@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED True
 
 WORKDIR /app
 COPY video-split/. ./
-COPY pkg/wrapper.py ./
+COPY pkg/. ./
 EXPOSE 8080
 
 ENTRYPOINT [ "python", "video-split.py" ]

@@ -5,27 +5,31 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 )
 
-func chain_video_processing(index int, bucket string, source string, forceRemote bool, useMem bool) FunctionChainResult {
-	split_file_dst := fmt.Sprintf("%s_%d-splitted", source, index)
-	merge_file_dst := fmt.Sprintf("%s_%d-transcoded", source, index)
+func chain_video_processing(index int, flags Flags) FunctionChainResult {
+	bucket := "video-processing"
+	source := "original-video"
+
+	split_file_dir := fmt.Sprintf("%s_%d-splitted", source, index)
+	merge_file_dir := fmt.Sprintf("%s_%d-transcoded", source, index)
 	dst := fmt.Sprintf("%s_%d-merged", source, index)
 
 	start := time.Now()
-	vs_result := function_video_split(bucket, source, split_file_dst, forceRemote, useMem)
+	vs_result := function_video_split(bucket, source, []string{"sample.mp4"}, split_file_dir, flags.ForceRemote, flags.UseMem)
 
 	var transcode_result [5]VideoTranscodeResult
+	var merge_object_list []string
 	var wg sync.WaitGroup
 	wg.Add(5)
 	for i := 0; i < 5; i++ {
 		go func(i int) {
 			defer wg.Done()
-			var splited_file_path = split_file_dst + "/seg" + strconv.Itoa(i+1) + "_sample.mp4"
-			transcode_result[i] = function_video_transcode(bucket, splited_file_path, merge_file_dst, forceRemote, useMem)
+			split_file_path := fmt.Sprintf("%s/seg%d_sample.mp4", split_file_dir, i+1)
+			merge_object_list = append(merge_object_list, split_file_path)
+			transcode_result[i] = function_video_transcode(bucket, split_file_path, []string{split_file_path}, merge_file_dir, flags.ForceRemote, flags.UseMem)
 		}(i)
 	}
 	wg.Wait()
@@ -33,7 +37,7 @@ func chain_video_processing(index int, bucket string, source string, forceRemote
 	vt_result := VideoTranscodeResult{}
 	vt_result.Duration = 0.0
 	vt_result.Response = VideoTranscodeResponse{
-		ForceRemote:       forceRemote,
+		ForceRemote:       flags.ForceRemote,
 		CodeDuration:      0.0,
 		DownloadDuration:  0.0,
 		TranscodeDuration: 0.0,
@@ -52,18 +56,19 @@ func chain_video_processing(index int, bucket string, source string, forceRemote
 	vt_result.Response.TranscodeDuration /= 5
 	vt_result.Response.UploadDuration /= 5
 
-	vm_result := function_video_merge(bucket, merge_file_dst, dst, forceRemote, useMem)
+	vm_result := function_video_merge(bucket, merge_file_dir, merge_object_list, dst, flags.ForceRemote, flags.UseMem)
 	duration := time.Since(start)
 
 	return FunctionChainResult{int64(start.UnixMicro()), duration.Seconds(), ImageScaleResult{}, ImageRecognitionResult{}, vs_result, vt_result, vm_result}
 }
 
-func function_video_split(bucket string, source string, destination string, forceRemote bool, useMem bool) VideoSplitResult {
+func function_video_split(bucket string, source string, object_list []string, destination string, forceRemote bool, useMem bool) VideoSplitResult {
 	var req_data VideoSplitRequest
 	var res_data VideoSplitResponse
 
 	req_data.Bucket = bucket
 	req_data.Source = source
+	req_data.ObjectList = object_list
 	req_data.Destination = destination
 	req_data.ForceRemote = forceRemote
 
@@ -93,12 +98,13 @@ func function_video_split(bucket string, source string, destination string, forc
 	return VideoSplitResult{duration.Seconds(), res_data}
 }
 
-func function_video_transcode(bucket string, source string, destination string, forceRemote bool, useMem bool) VideoTranscodeResult {
+func function_video_transcode(bucket string, source string, object_list []string, destination string, forceRemote bool, useMem bool) VideoTranscodeResult {
 	var req_data VideoTranscodeRequest
 	var res_data VideoTranscodeResponse
 
 	req_data.Bucket = bucket
 	req_data.Source = source
+	req_data.ObjectList = object_list
 	req_data.Destination = destination
 	req_data.ForceRemote = forceRemote
 
@@ -128,12 +134,13 @@ func function_video_transcode(bucket string, source string, destination string, 
 	return VideoTranscodeResult{duration.Seconds(), res_data}
 }
 
-func function_video_merge(bucket string, source string, destination string, forceRemote bool, useMem bool) VideoMergeResult {
+func function_video_merge(bucket string, source string, object_list []string, destination string, forceRemote bool, useMem bool) VideoMergeResult {
 	var req_data VideoMergeRequest
 	var res_data VideoMergeResponse
 
 	req_data.Bucket = bucket
 	req_data.Source = source
+	req_data.ObjectList = object_list
 	req_data.Destination = destination
 	req_data.ForceRemote = forceRemote
 
