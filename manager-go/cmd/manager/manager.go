@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bufio"
-	"encoding/json"
 	"log"
-	"net"
 	"os"
 	"syscall"
 
@@ -24,73 +21,15 @@ type Response struct {
 
 var (
 	storagePath string
-	hostIP      string
-	managerPort string
 )
 
 func init() {
 	// read storage path from environment variable
 	storagePath = os.Getenv("STORAGE_PATH")
-
-	// read host ip from environment variable
-	hostIP = os.Getenv("HOST_IP")
-	managerPort = os.Getenv("MANAGER_PORT")
-	// write manager ip to storage
-	f, err := os.Create(storagePath + "/MANAGER_IP")
-	if err != nil {
-		panic(err)
-	}
-	log.Println("HOST IP: " + hostIP)
-	log.Println("MANAGER PORT: " + managerPort)
-	f.WriteString(hostIP)
-	f.Close()
 }
 
 func main() {
-	go handleConnections()
 	handleFileEvents()
-}
-
-func handleConnections() {
-	listener, err := net.Listen("tcp", ":"+managerPort)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer listener.Close()
-
-	log.Println("Manager is running on " + hostIP + ":" + managerPort)
-
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Println("[Error] listener.Accept(): ", err)
-			continue
-		}
-
-		go handleConnection(conn)
-	}
-
-}
-
-func handleConnection(conn net.Conn) {
-	reader := bufio.NewReader(conn)
-	for {
-		var req Request
-		var res Response
-		// Read the request
-		err := json.NewDecoder(reader).Decode(&req)
-		if err != nil {
-			log.Println(err)
-			break
-		}
-
-		// Handle the request
-		switch req.Type {
-		}
-
-		// Write the response
-		json.NewEncoder(conn).Encode(res)
-	}
 }
 
 func handleFileEvents() {
