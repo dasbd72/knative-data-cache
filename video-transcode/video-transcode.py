@@ -55,7 +55,7 @@ def videoMerge():
     data = json.loads(data)
 
     bucket_name = data["bucket"].rstrip("/")
-    download_path = data["source"].rstrip("/")
+    download_path = data["source"].rstrip("/") + "/"
     upload_path = data["destination"].rstrip("/") + "/"
     object_list = data['object_list']
     if "force_remote" in data:
