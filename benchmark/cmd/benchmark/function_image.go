@@ -11,7 +11,7 @@ import (
 func chain_image_processing(index int, flags Flags) FunctionChainResult {
 	bucket := "images-processing"
 	source := "larger-image"
-	object_list := []string{"DSC08867.JPG", "DSC08868.JPG", "DSC08869.JPG", "DSC08870.JPG", "DSC08871.JPG"}
+	object_list := []string{"DSC08867.JPG", "DSC08868.JPG", "DSC08869.JPG", "DSC08871.JPG", "DSC08872.JPG"}
 
 	intermediate := fmt.Sprintf("%s_%d-scaled", source, index)
 
