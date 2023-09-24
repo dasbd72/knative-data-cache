@@ -1,5 +1,6 @@
 #!/bin/bash
 docker rmi johnson684/manager:golang-socket -f
+docker rmi dasbd72/data-serve:latest -f
 docker rmi johnson684/image-scale:python-socket -f
 docker rmi johnson684/image-recognition:python-socket -f
 docker rmi johnson684/cache-deleter:python -f
@@ -7,6 +8,11 @@ docker rmi johnson684/cache-deleter:python -f
 cd manager-go
 docker build -t johnson684/manager:golang-socket .
 docker push johnson684/manager:golang-socket
+cd ..
+
+cd data-serve
+docker build -t dasbd72/data-serve:latest .
+docker push dasbd72/data-serve:latest
 cd ..
 
 cd cache-deleter
@@ -42,21 +48,25 @@ kubectl apply -f yamls/pvc-disk.yaml
 kubectl delete -f yamls/apps.yaml
 kubectl delete -f yamls/new-apps.yaml
 kubectl delete -f yamls/manager.yaml
+kubectl delete -f yamls/data-serve.yaml
 kubectl delete -f yamls/cache-deleter.yaml
 
 
 kubectl apply -f yamls/apps.yaml
 kubectl apply -f yamls/new-apps.yaml
 kubectl apply -f yamls/manager.yaml
+kubectl apply -f yamls/data-serve.yaml
 kubectl apply -f yamls/cache-deleter.yaml
 
 # disk storage
 kubectl delete -f yamls/apps-disk.yaml
 kubectl delete -f yamls/manager-disk.yaml
+kubectl delete -f yamls/data-serve-disk.yaml
 kubectl delete -f yamls/cache-deleter-disk.yaml
 
 kubectl apply -f yamls/apps-disk.yaml
 kubectl apply -f yamls/manager-disk.yaml
+kubectl apply -f yamls/data-serve-disk.yaml
 kubectl apply -f yamls/cache-deleter-disk.yaml
 
 

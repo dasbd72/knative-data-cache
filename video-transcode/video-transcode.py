@@ -27,12 +27,10 @@ def downloadVideos(minio_client: Minio, bucket_name, remote_path, local_path, ob
     return cnt
 
 
-def uploadVideo(minio_client: Minio, bucket_name, local_path, remote_path):
+def uploadVideos(minio_client: Minio, bucket_name, local_path, remote_path, remote_upload=False):
     for filename in os.listdir(local_path):
         filepath = os.path.join(local_path, filename)
-        print("Trying to upload transcoded file")
-        minio_client.fput_object(bucket_name, remote_path + filename, filepath)
-        print("Successfully upload transcoded file")
+        minio_client.fput_object(bucket_name, remote_path + filename, filepath, remote_upload=remote_upload)
     return
 
 
@@ -55,7 +53,7 @@ def videoMerge():
     data = json.loads(data)
 
     bucket_name = data["bucket"].rstrip("/")
-    download_path = data["source"].rstrip("/")
+    download_path = data["source"].rstrip("/") + "/"
     upload_path = data["destination"].rstrip("/") + "/"
     object_list = data['object_list']
     if "force_remote" in data:
@@ -89,7 +87,7 @@ def videoMerge():
     transcode_duration = transcode_end_time - transcode_start_time
 
     upload_start_time = time.perf_counter()
-    uploadVideo(minio_client, bucket_name, local_path, upload_path)
+    uploadVideos(minio_client, bucket_name, local_path, upload_path)
     upload_end_time = time.perf_counter()
     upload_duration = upload_end_time - upload_start_time
 

@@ -27,9 +27,10 @@ func chain_video_processing(index int, flags Flags) FunctionChainResult {
 	for i := 0; i < 5; i++ {
 		go func(i int) {
 			defer wg.Done()
-			split_file_path := fmt.Sprintf("%s/seg%d_sample.mp4", split_file_dir, i+1)
-			merge_object_list = append(merge_object_list, split_file_path)
-			transcode_result[i] = function_video_transcode(bucket, split_file_path, []string{split_file_path}, merge_file_dir, flags.ForceRemote, flags.UseMem)
+			split_file_name := fmt.Sprintf("seg%d_sample.mp4", i+1)
+			merge_file_name := fmt.Sprintf("seg%d_sample.avi", i+1)
+			merge_object_list = append(merge_object_list, merge_file_name)
+			transcode_result[i] = function_video_transcode(bucket, split_file_dir, []string{split_file_name}, merge_file_dir, flags.ForceRemote, flags.UseMem)
 		}(i)
 	}
 	wg.Wait()

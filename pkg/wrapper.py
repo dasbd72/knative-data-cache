@@ -16,62 +16,6 @@ logging.basicConfig(
 )
 
 
-# class Manager:
-#     def __init__(self, endpoint) -> None:
-#         self.exist = False
-#         self.endpoint: str = endpoint
-#         self.connection: socket.socket = None
-
-#         if "STORAGE_PATH" in os.environ.keys():
-#             self.storage_path = os.environ["STORAGE_PATH"]
-#         else:
-#             self.storage_path = None
-#         logging.info(f"STORAGE_PATH: {self.storage_path}")
-
-#         if os.path.exists(os.path.join(self.storage_path, "MANAGER_IP")):
-#             with open(os.path.join(self.storage_path, "MANAGER_IP"), "r") as f:
-#                 self.manager_ip = f.read()
-#         else:
-#             self.manager_ip = None
-
-#         self.manager_port = os.environ.get("MANAGER_PORT")
-
-#         if self.storage_path is not None and self.manager_ip is not None and self.manager_port is not None:
-#             self.exist = True
-#         logging.info(f"MANAGER: {self.manager_ip}:{self.manager_port}")
-
-#         try:
-#             self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#             self.connection.connect((self.manager_ip, self.manager_port))
-#         except:
-#             logging.error("connection failed")
-#             self.exist = False
-
-#     def close(self) -> None:
-#         if self.connection is not None:
-#             self.connection.close()
-
-#     def send_recv(self, data: str, bufsize: int = 128) -> str:
-#         if self.connection is None:
-#             logging.error("connection is None")
-#             return "{}"
-#         try:
-#             # Send data
-#             self.connection.send(data.encode("utf-8"))
-
-#             # Receive data
-#             result = self.connection.recv(bufsize).decode("utf-8")
-#         except:
-#             logging.error("send_recv failed")
-#             return "{}"
-#         else:
-#             result = json.JSONDecoder().decode(result)
-#             if "success" in result.keys() and result["success"]:
-#                 return result["body"]
-#             else:
-#                 return "{}"
-
-
 class MinioWrapper(Minio):
     """Inherited Wrapper"""
 
@@ -122,10 +66,10 @@ class MinioWrapper(Minio):
         # Read data serve ip:port from storage
         if os.path.exists(os.path.join(self.storage_path, "DATA_SERVE_IP")):
             with open(os.path.join(self.storage_path, "DATA_SERVE_IP"), "r") as f:
-                self.data_serve_ip = f.read()
+                self.data_serve_ip_port = f.read()
         else:
-            self.data_serve_ip = None
-        logging.info(f"DATA_SERVE_IP: {self.data_serve_ip}")
+            self.data_serve_ip_port = None
+        logging.info(f"DATA_SERVE_IP: {self.data_serve_ip_port}")
 
     def fput_object(
         self,
@@ -167,12 +111,7 @@ class MinioWrapper(Minio):
 
                 save_hash_to_file(calculate_hash(local_dst), self.get_hash_file_path(local_dst))
 
-                self.etcd_client.put(file_path, self.data_serve_ip)
-                logging.info(
-                    "read value from etcd:{}".format(
-                        self.etcd_client.get(file_path)
-                    )
-                )
+                self.etcd_client.put(local_dst, self.data_serve_ip_port)
 
                 return True
             except Exception as e:
@@ -239,12 +178,26 @@ class MinioWrapper(Minio):
             if self.force_remote or remote_download:
                 return False
 
-            return False
+            try:
+                kv = self.etcd_client.get(local_src)
+                logging.info("read value from etcd:{}".format(kv))
+
+                if not kv or kv[0] is None:
+                    return False
+
+                data_serve_ip_port = kv[0].decode('utf-8')
+                return downloadFromDataServe(data_serve_ip_port, local_src, file_path)
+
+            except Exception as e:
+                logging.error("download from cluster failed: {}".format(e))
+                return False
 
         if copy_from_local():
+            logging.info("fget_object copy_from_local {}".format(object_name))
             return
 
         if download_from_cluster():
+            logging.info("fget_object download_from_cluster {}".format(object_name))
             return
 
         # remote_download or force_remote or copy_from_local and download_from_cluster failed
@@ -310,3 +263,29 @@ def verify_hash(file_path, hash_file_path, hash_algorithm="sha256"):
         hash_value = file.read()
         verifySuccess = hash_value == calculated_hash
     return verifySuccess
+
+
+def downloadFromDataServe(data_serve_ip_port: str, remote_path: str, file_path: str, chunk_size: int = 4096):
+    """Download file from data serve."""
+    # TCP Connection
+    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        ip, port = data_serve_ip_port.split(":")
+        conn.connect((ip, int(port)))
+    except Exception as e:
+        logging.error("Data Serve download {} failed {}".format(remote_path, e))
+        return False
+
+    # Send request
+    req = {"type": "download", "body": remote_path}
+    conn.send(json.dumps(req).encode('utf-8'))
+
+    # Receive file
+    with open(file_path, 'wb') as fi:
+        while True:
+            data = conn.recv(chunk_size)
+            if not data:
+                break
+            fi.write(data)
+
+    return True

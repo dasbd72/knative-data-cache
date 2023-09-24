@@ -27,10 +27,10 @@ def downloadVideos(minio_client: Minio, bucket_name, remote_path, local_path, ob
     return cnt
 
 
-def uploadVideo(minio_client: Minio, bucket_name, local_path, remote_path):
+def uploadVideos(minio_client: Minio, bucket_name, local_path, remote_path, remote_upload=False):
     for filename in os.listdir(local_path):
         filepath = os.path.join(local_path, filename)
-        minio_client.fput_object(bucket_name, remote_path + filename, filepath)
+        minio_client.fput_object(bucket_name, remote_path + filename, filepath, remote_upload=remote_upload)
     return
 
 
@@ -103,7 +103,7 @@ def videoMerge():
     merge_duration = merge_end_time - merge_start_time
 
     upload_start_time = time.perf_counter()
-    uploadVideo(minio_client, bucket_name, local_path, upload_path)
+    uploadVideos(minio_client, bucket_name, local_path, upload_path, remote_upload=True)
     upload_end_time = time.perf_counter()
     upload_duration = upload_end_time - upload_start_time
 
