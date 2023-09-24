@@ -225,13 +225,7 @@ class MinioWrapper(Minio):
         )
 
     def get_hash_file_path(self, file_path) -> str:
-        try:
-            parts = file_path.split(".")
-            parts[-1] = "txt"
-            hash_file_path = ".".join(parts)
-        except Exception as e:
-            logging.error("{}".format(e))
-        return hash_file_path
+        return file_path+".hash"
 
 
 def calculate_hash(file_path, hash_algorithm="sha256", buffer_size=65536):
