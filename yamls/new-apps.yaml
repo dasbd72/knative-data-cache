@@ -36,7 +36,7 @@ spec:
             - name: LOG_LEVEL
               value: INFO
             - name: ETCD_HOST
-              value: "10.121.240.143:2379"
+              value: "10.121.240.143"
           resources:
             requests:
               cpu: 1000m
@@ -88,7 +88,7 @@ spec:
             - name: LOG_LEVEL
               value: INFO
             - name: ETCD_HOST
-              value: "10.121.240.143:2379"
+              value: "10.121.240.143"
           resources:
             requests:
               cpu: 1000m
@@ -140,7 +140,7 @@ spec:
             - name: LOG_LEVEL
               value: INFO
             - name: ETCD_HOST
-              value: "10.121.240.143:2379"
+              value: "10.121.240.143"
           resources:
             requests:
               cpu: 1000m
