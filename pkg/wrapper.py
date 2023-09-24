@@ -112,11 +112,6 @@ class MinioWrapper(Minio):
                 save_hash_to_file(calculate_hash(local_dst), self.get_hash_file_path(local_dst))
 
                 self.etcd_client.put(local_dst, self.data_serve_ip_port)
-                logging.info(
-                    "read value from etcd:{}".format(
-                        self.etcd_client.get(local_dst)
-                    )
-                )
 
                 return True
             except Exception as e:
