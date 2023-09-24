@@ -74,6 +74,11 @@ func handleFileEvents() {
 }
 
 func handleFileEvent(event rfsnotify.Event, lru *filelru.LRU) error {
+	// Ignore if file is *.hash
+	if len(event.Name) > 5 && event.Name[len(event.Name)-5:] == ".hash" {
+		return nil
+	}
+
 	if event.Has(rfsnotify.Write) || event.Has(rfsnotify.Create) || event.Has(rfsnotify.Chmod) {
 		// push file to LRU if file is not directory
 		if fs, err := os.Stat(event.Name); err == nil && !fs.IsDir() {
