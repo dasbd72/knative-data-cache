@@ -7,6 +7,7 @@ import (
 
 	"github.com/dasbd72/images-processing-benchmarks/manager-go/pkg/filelru"
 	"github.com/dasbd72/rfsnotify"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 type Request struct {
@@ -21,11 +22,25 @@ type Response struct {
 
 var (
 	storagePath string
+	etcdHost    string
+	etcdClient  *clientv3.Client
 )
 
 func init() {
 	// read storage path from environment variable
 	storagePath = os.Getenv("STORAGE_PATH")
+
+	// read etcd host from environment variable
+	etcdHost = os.Getenv("ETCD_HOST")
+
+	// initialize etcd client
+	var err error
+	etcdClient, err = clientv3.New(clientv3.Config{
+		Endpoints: []string{etcdHost},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
@@ -92,6 +107,10 @@ func handleFileEvent(event rfsnotify.Event, lru *filelru.LRU) error {
 		if err != nil {
 			return err
 		}
+		_, err = etcdClient.Delete(etcdClient.Ctx(), event.Name)
+		if err != nil {
+			return err
+		}
 	} else {
 		log.Println("[WARNING] event not expected: ", event)
 	}
@@ -146,6 +165,11 @@ func releaseStorage(percentage float64, lru *filelru.LRU) error {
 			}
 
 			err = os.Remove(file)
+			if err != nil {
+				return err
+			}
+
+			_, err = etcdClient.Delete(etcdClient.Ctx(), file)
 			if err != nil {
 				return err
 			}
