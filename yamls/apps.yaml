@@ -34,8 +34,8 @@ spec:
               value: /shared
             - name: LOG_LEVEL
               value: INFO
-            - name: MANAGER_PORT
-              value: "12345"
+            - name: ETCD_HOST
+              value: "10.121.240.143:2379"
           resources:
             requests:
               cpu: 1000m
@@ -84,8 +84,8 @@ spec:
               value: /shared
             - name: LOG_LEVEL
               value: INFO
-            - name: MANAGER_PORT
-              value: "12345"
+            - name: ETCD_HOST
+              value: "10.121.240.143:2379"
           resources:
             requests:
               cpu: 1000m

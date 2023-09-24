@@ -45,11 +45,7 @@ class MinioWrapper(Minio):
 
         self.endpoint: str = endpoint
         self.force_remote: bool = force_remote
-        if os.path.exists("ETCD_HOST"):
-            with open("ETCD_HOST", "r") as f:
-                self.etcd_host = f.read()
-        else:
-            self.etcd_host = None
+        self.etcd_host = os.getenv("ETCD_HOST", "localhost:2379")
         logging.info(f"ETCD_HOST: {self.etcd_host}")
 
         try:
@@ -57,10 +53,7 @@ class MinioWrapper(Minio):
         except Exception as e:
             logging.error("Initialize etcd fail: {}".format(e))
 
-        if "STORAGE_PATH" in os.environ.keys():
-            self.storage_path = os.environ["STORAGE_PATH"]
-        else:
-            self.storage_path = None
+        self.storage_path = os.getenv("STORAGE_PATH", None)
         logging.info(f"STORAGE_PATH: {self.storage_path}")
 
         # Read data serve ip:port from storage
