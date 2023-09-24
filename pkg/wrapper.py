@@ -111,10 +111,10 @@ class MinioWrapper(Minio):
 
                 save_hash_to_file(calculate_hash(local_dst), self.get_hash_file_path(local_dst))
 
-                self.etcd_client.put(file_path, self.data_serve_ip_port)
+                self.etcd_client.put(local_dst, self.data_serve_ip_port)
                 logging.info(
                     "read value from etcd:{}".format(
-                        self.etcd_client.get(file_path)
+                        self.etcd_client.get(local_dst)
                     )
                 )
 
@@ -184,7 +184,9 @@ class MinioWrapper(Minio):
                 return False
 
             try:
-                kv = self.etcd_client.get(file_path)
+                kv = self.etcd_client.get(local_src)
+                logging.info("read value from etcd:{}".format(kv))
+
                 if not kv or kv[0] is None:
                     return False
 
@@ -196,9 +198,11 @@ class MinioWrapper(Minio):
                 return False
 
         if copy_from_local():
+            logging.info("fget_object copy_from_local {}".format(object_name))
             return
 
         if download_from_cluster():
+            logging.info("fget_object download_from_cluster {}".format(object_name))
             return
 
         # remote_download or force_remote or copy_from_local and download_from_cluster failed
