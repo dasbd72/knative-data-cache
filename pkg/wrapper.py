@@ -183,7 +183,17 @@ class MinioWrapper(Minio):
             if self.force_remote or remote_download:
                 return False
 
-            return downloadFromDataServe(self.data_serve_ip_port, local_src, file_path)
+            try:
+                kv = self.etcd_client.get(file_path)
+                if not kv or kv[0] is None:
+                    return False
+
+                data_serve_ip_port = kv[0].decode('utf-8')
+                return downloadFromDataServe(data_serve_ip_port, local_src, file_path)
+
+            except Exception as e:
+                logging.error("download from cluster failed: {}".format(e))
+                return False
 
         if copy_from_local():
             return
@@ -262,7 +272,7 @@ def downloadFromDataServe(data_serve_ip_port: str, remote_path: str, file_path: 
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         ip, port = data_serve_ip_port.split(":")
-        conn.connect((ip, port))
+        conn.connect((ip, int(port)))
     except Exception as e:
         logging.error("Data Serve download {} failed {}".format(remote_path, e))
         return False
