@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: data-serve-daemonset
+  labels:
+    app.kubernetes.io/name: data-serve
+spec:
+  selector:
+    matchLabels:
+      app: data-serve
+  template:
+    metadata:
+      labels:
+        app: data-serve
+    spec:
+      tolerations:
+        # these tolerations are to have the daemonset runnable on control plane nodes
+        # remove them if your control plane nodes should not run pods
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: data-serve-container
+          image: dasbd72/data-serve:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 12347
+              hostPort: 12347
+          volumeMounts:
+            - name: shared-volume
+              mountPath: /shared
+          env:
+            - name: STORAGE_PATH
+              value: /shared
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: DATA_SERVE_PORT
+              value: "12347"
+      volumes:
+        - name: shared-volume
+          hostPath:
+            path: "/dev/shm"
