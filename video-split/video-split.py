@@ -19,10 +19,10 @@ access_key = os.getenv("MINIO_ACCESS_KEY")
 secret_key = os.getenv("MINIO_SECRET_KEY")
 
 
-def downloadVideos(minio_client: Minio, bucket_name, remote_path, local_path, object_list=[]):
+def downloadVideos(minio_client: Minio, bucket_name, remote_path, local_path, object_list=[], remote_download=False):
     cnt = 0
     for obj in object_list:
-        minio_client.fget_object(bucket_name, remote_path + obj, local_path + os.path.basename(obj))
+        minio_client.fget_object(bucket_name, remote_path + obj, local_path + os.path.basename(obj), remote_download=remote_download)
         cnt += 1
     return cnt
 
@@ -96,7 +96,7 @@ def videoSplit():
     print(f"Connected to {endpoint}")
 
     download_start_time = time.perf_counter()
-    downloadVideos(minio_client, bucket_name, download_path, local_path, object_list=object_list)
+    downloadVideos(minio_client, bucket_name, download_path, local_path, object_list=object_list, remote_download=True)
     download_end_time = time.perf_counter()
     download_duration = download_end_time - download_start_time
 
