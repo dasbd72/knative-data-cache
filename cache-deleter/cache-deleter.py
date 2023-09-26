@@ -8,7 +8,7 @@ def delete_cache(folder_path):
 
     for root, dirs, files in os.walk(folder_path):
         for filename in files:
-            if(filename == "MANAGER_IP"):
+            if(filename == "DATA_SERVE_IP"):
                 continue
             file_path = os.path.join(root, filename)
 
