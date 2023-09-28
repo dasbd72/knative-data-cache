@@ -38,8 +38,8 @@ docker build -t johnson684/video-merge:python -f video-merge/Dockerfile .
 docker push johnson684/video-merge:python
 
 # pv
-kubectl apply -f yamls/pv.yaml
-kubectl apply -f yamls/pvc.yaml
+# kubectl apply -f yamls/pv.yaml
+# kubectl apply -f yamls/pvc.yaml
 
 kubectl apply -f yamls/pv-disk.yaml
 kubectl apply -f yamls/pvc-disk.yaml
