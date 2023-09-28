@@ -4,6 +4,7 @@ metadata:
   name: cache-deleter
 spec:
   schedule: "* * * * */1"
+  successfulJobsHistoryLimit: 0
   jobTemplate:
     spec:
       template:
