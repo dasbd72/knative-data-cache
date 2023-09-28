@@ -46,25 +46,25 @@ kubectl apply -f yamls/pvc-disk.yaml
 
 # memory storage
 # kubectl delete -f yamls/apps.yaml
-kubectl delete -f yamls/new-apps.yaml
-kubectl delete -f yamls/manager.yaml
-kubectl delete -f yamls/data-serve.yaml
-kubectl delete -f yamls/cache-deleter.yaml
+# kubectl delete -f yamls/manager.yaml
+# kubectl delete -f yamls/data-serve.yaml
+# kubectl delete -f yamls/cache-deleter.yaml
 
 
 # kubectl apply -f yamls/apps.yaml
-kubectl apply -f yamls/new-apps.yaml
-kubectl apply -f yamls/manager.yaml
-kubectl apply -f yamls/data-serve.yaml
-kubectl apply -f yamls/cache-deleter.yaml
+# kubectl apply -f yamls/manager.yaml
+# kubectl apply -f yamls/data-serve.yaml
+# kubectl apply -f yamls/cache-deleter.yaml
 
 # disk storage
 kubectl delete -f yamls/apps-disk.yaml
+kubectl delete -f yamls/new-apps.yaml
 kubectl delete -f yamls/manager-disk.yaml
 kubectl delete -f yamls/data-serve-disk.yaml
 kubectl delete -f yamls/cache-deleter-disk.yaml
 
 kubectl apply -f yamls/apps-disk.yaml
+kubectl apply -f yamls/new-apps.yaml
 kubectl apply -f yamls/manager-disk.yaml
 kubectl apply -f yamls/data-serve-disk.yaml
 kubectl apply -f yamls/cache-deleter-disk.yaml
