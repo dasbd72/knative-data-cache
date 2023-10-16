@@ -51,7 +51,7 @@ class MinioWrapper(Minio):
         try:
             self.etcd_client = etcd3.client(host=self.etcd_host, port=2379)
         except Exception as e:
-            logging.error("Initialize etcd fail: {}".format(e))
+            logging.error("Connection to etcd fail: {}".format(e))
 
         self.storage_path = os.getenv("STORAGE_PATH", None)
         logging.info(f"STORAGE_PATH: {self.storage_path}")
@@ -84,16 +84,16 @@ class MinioWrapper(Minio):
 
         def copy_to_local():
             if self.force_remote:
-                logging.info("force remote")
+                logging.info("fput copy failed: force remote")
                 return False
 
             if not self.storage_path:
-                logging.info("no storage path")
+                logging.info("fput copy failed: no storage path")
                 return False
 
             # TODO: use a better way to check whether to copy to local
             if psutil.disk_usage(self.storage_path).free < os.path.getsize(file_path) * 2:
-                logging.info("disk is full")
+                logging.info("fput copy failed: disk is full")
                 return False
 
             try:
@@ -149,17 +149,17 @@ class MinioWrapper(Minio):
             if self.force_remote or remote_download:
                 return False
             if not self.storage_path:
-                logging.info("no storage path")
+                logging.info("fget copy failed: no storage path")
                 return False
             if not os.path.exists(local_src):
-                logging.info("file not exists")
+                logging.info("fget copy failed: file not exists")
                 return False
 
             try:
                 logging.info("fget_object local {}".format(local_src))
                 shutil.copy(local_src, file_path)
                 if not verify_hash(file_path, self.get_hash_file_path(local_src)):
-                    logging.info("incorrect hash value, file {} is corrupted.".format(object_name))
+                    logging.info("fget copy failed: incorrect hash value, file {} is corrupted.".format(object_name))
                     return False
                 return True
             except Exception as e:
