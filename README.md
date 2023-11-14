@@ -23,8 +23,9 @@ bash deploy.sh
 ## Requests to application
 
 ```bash=
-time curl -X POST http://image-scale.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images", "destination":"images-scaled"}'
-time curl -X POST http://image-recognition.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"images-processing", "source":"images-scaled", "short_result": true}'
+# Force remote
+time curl -X POST http://image-scale.default.192.168.100.0.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"stress-benchmark", "source":"larger_image_0", "destination":"larger_image_scaled", "force_remote":true, "object_list":["DSC08867.JPG", "DSC08868.JPG", "DSC08869.JPG", "DSC08871.JPG", "DSC08872.JPG"]}'
+time curl -X POST http://image-recognition.default.192.168.100.0.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"stress-benchmark", "source":"larger_image_scaled", "short_result": true, "force_remote":true, "object_list":["DSC08867.JPG", "DSC08868.JPG", "DSC08869.JPG", "DSC08871.JPG", "DSC08872.JPG"]}'
 
 curl -X POST http://video-split.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"video-processing", "source":"original-video", "destination":"splitted-video"}'
 curl -X POST http://video-transcode.default.127.0.0.1.sslip.io -H 'Content-Type: application/json' -d '{"bucket":"video-processing", "source":"splitted-video/seg1_sample.mp4", "destination":"transcoded-video"}'
