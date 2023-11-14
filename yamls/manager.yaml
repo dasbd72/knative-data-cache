@@ -40,7 +40,7 @@ spec:
             - name: STORAGE_PATH
               value: /shared
             - name: ETCD_HOST
-              value: "10.121.240.143"
+              value: "10.121.240.235"
       volumes:
         - name: shared-volume
           hostPath:
