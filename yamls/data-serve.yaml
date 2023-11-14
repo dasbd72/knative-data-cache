@@ -22,6 +22,7 @@ spec:
         - key: node-role.kubernetes.io/master
           operator: Exists
           effect: NoSchedule
+      hostNetwork: true
       containers:
         - name: data-serve-container
           image: dasbd72/data-serve:latest
