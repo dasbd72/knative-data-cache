@@ -27,8 +27,8 @@ spec:
           image: dasbd72/data-serve:latest
           imagePullPolicy: Always
           ports:
-            - containerPort: 12347
-              hostPort: 12347
+            - containerPort: 12348
+              hostPort: 12348
           volumeMounts:
             - name: shared-volume
               mountPath: /shared
@@ -40,8 +40,8 @@ spec:
                 fieldRef:
                   fieldPath: status.hostIP
             - name: DATA_SERVE_PORT
-              value: "12347"
+              value: "12348"
       volumes:
         - name: shared-volume
           hostPath:
-            path: "/dev/shm"
+            path: /storage

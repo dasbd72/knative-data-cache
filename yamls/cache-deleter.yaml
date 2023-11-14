@@ -11,7 +11,7 @@ spec:
         spec:
           containers:
             - name: cache-deleter
-              image: johnson684/cache-deleter:python
+              image: johnson684/cache-deleter:latest
               imagePullPolicy: Always
               volumeMounts:
                 - name: shared-volume

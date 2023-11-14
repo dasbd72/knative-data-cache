@@ -17,8 +17,7 @@ spec:
         autoscaling.knative.dev/max-scale: "100"
     spec:
       containers:
-
-        - image: docker.io/johnson684/video-split:python
+        - image: docker.io/johnson684/video-split:latest
           imagePullPolicy: Always
           name: video-split
           volumeMounts:
@@ -47,7 +46,7 @@ spec:
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
-            claimName: shared-volume-claim-disk
+            claimName: shared-volume-claim
 ---
 apiVersion: serving.knative.dev/v1
 kind: Service
@@ -69,7 +68,7 @@ spec:
     spec:
       containers:
 
-        - image: docker.io/johnson684/video-transcode:python
+        - image: docker.io/johnson684/video-transcode:latest
           imagePullPolicy: Always
           name: video-transcode
 
@@ -99,7 +98,7 @@ spec:
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
-            claimName: shared-volume-claim-disk
+            claimName: shared-volume-claim
 ---
 apiVersion: serving.knative.dev/v1
 kind: Service
@@ -121,7 +120,7 @@ spec:
     spec:
       containers:
 
-        - image: docker.io/johnson684/video-merge:python
+        - image: docker.io/johnson684/video-merge:latest
           imagePullPolicy: Always
           name: video-merge
 
@@ -151,4 +150,4 @@ spec:
       volumes:
         - name: shared-volume
           persistentVolumeClaim:
-            claimName: shared-volume-claim-disk
+            claimName: shared-volume-claim

@@ -24,8 +24,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: manager-container
-
-          image: johnson684/manager:golang-socket
+          image: johnson684/manager:latest
           imagePullPolicy: Always
           resources:
             requests:
@@ -34,9 +33,6 @@ spec:
             limits:
               cpu: 300m
               memory: 400Mi
-          ports:
-            - containerPort: 12345
-              hostPort: 12345
           volumeMounts:
             - name: shared-volume
               mountPath: /shared
@@ -48,4 +44,4 @@ spec:
       volumes:
         - name: shared-volume
           hostPath:
-            path: "/dev/shm"
+            path: /storage
