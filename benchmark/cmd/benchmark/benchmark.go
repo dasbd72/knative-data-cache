@@ -20,13 +20,13 @@ var (
 )
 
 func init() {
+	flag.StringVar(&flags.UrlPostfix, "url-postfix", "default.127.0.0.1.sslip.io", "url postfix, e.g. default.127.0.0.1.sslip.io")
 	flag.IntVar(&flags.Concurrency, "concurrency", 2147483647, "number of concurrent tasks")
 	flag.IntVar(&flags.Tasks, "tasks", 5, "number of tasks")
 	flag.StringVar(&flags.Distribution, "distribution", "poisson", "distribution of tasks: [poisson, burst, seq|sequential]")
 	flag.Float64Var(&flags.Rate, "rate", 0.5, "rate of poisson process")
 	flag.BoolVar(&flags.ForceRemote, "force-remote", false, "force remote")
 	flag.BoolVar(&flags.Warmup, "warmup", false, "warmup")
-	flag.BoolVar(&flags.UseMem, "use-mem", false, "use memory if true, else use disk")
 	flag.StringVar(&flags.WorkflowType, "workflow-type", "ImageProcessing", "workflow type")
 
 	flag.Parse()

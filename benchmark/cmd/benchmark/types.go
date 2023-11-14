@@ -1,13 +1,13 @@
 package main
 
 type Flags struct {
+	UrlPostfix   string  `json:"url_postfix"`
 	Concurrency  int     `json:"concurrency"`
 	Tasks        int     `json:"tasks"`
 	Distribution string  `json:"distribution"`
 	Rate         float64 `json:"rate"`
 	ForceRemote  bool    `json:"force_remote"`
 	Warmup       bool    `json:"warmup"`
-	UseMem       bool    `json:"use_mem"`
 	WorkflowType string  `json:"workflow_type"`
 }
 

@@ -16,14 +16,14 @@ func chain_image_processing(index int, flags Flags) FunctionChainResult {
 	intermediate := fmt.Sprintf("%s_%d-scaled", source, index)
 
 	start := time.Now()
-	is_result := function_image_scale(bucket, source, object_list, intermediate, flags.ForceRemote, flags.UseMem)
-	ir_result := function_image_recognition(bucket, intermediate, object_list, flags.ForceRemote, flags.UseMem)
+	is_result := function_image_scale(bucket, source, object_list, intermediate, flags.ForceRemote, flags.UrlPostfix)
+	ir_result := function_image_recognition(bucket, intermediate, object_list, flags.ForceRemote, flags.UrlPostfix)
 	duration := time.Since(start)
 
 	return FunctionChainResult{int64(start.UnixMicro()), duration.Seconds(), is_result, ir_result, VideoSplitResult{}, VideoTranscodeResult{}, VideoMergeResult{}}
 }
 
-func function_image_scale(bucket string, source string, object_list []string, destination string, forceRemote bool, useMem bool) ImageScaleResult {
+func function_image_scale(bucket string, source string, object_list []string, destination string, forceRemote bool, urlPostfix string) ImageScaleResult {
 	var req_data ImageScaleRequest = ImageScaleRequest{
 		Bucket:      bucket,
 		Source:      source,
@@ -40,10 +40,7 @@ func function_image_scale(bucket string, source string, object_list []string, de
 	}
 
 	start := time.Now()
-	url := "http://image-scale.default.127.0.0.1.sslip.io"
-	if !useMem {
-		url = "http://image-scale-disk.default.127.0.0.1.sslip.io"
-	}
+	url := "http://image-scale." + urlPostfix
 	res, err := http.Post(url, "application/json", req)
 	if err != nil {
 		panic(err)
@@ -62,7 +59,7 @@ func function_image_scale(bucket string, source string, object_list []string, de
 	return ImageScaleResult{duration.Seconds(), res_data}
 }
 
-func function_image_recognition(bucket string, source string, object_list []string, forceRemote bool, useMem bool) ImageRecognitionResult {
+func function_image_recognition(bucket string, source string, object_list []string, forceRemote bool, urlPostfix string) ImageRecognitionResult {
 	var req_data ImageRecognitionRequest = ImageRecognitionRequest{
 		Bucket:      bucket,
 		Source:      source,
@@ -78,10 +75,7 @@ func function_image_recognition(bucket string, source string, object_list []stri
 	}
 
 	start := time.Now()
-	url := "http://image-recognition.default.127.0.0.1.sslip.io"
-	if !useMem {
-		url = "http://image-recognition-disk.default.127.0.0.1.sslip.io"
-	}
+	url := "http://image-recognition." + urlPostfix
 	res, err := http.Post(url, "application/json", req)
 	if err != nil {
 		panic(err)

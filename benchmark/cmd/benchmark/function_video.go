@@ -18,7 +18,7 @@ func chain_video_processing(index int, flags Flags) FunctionChainResult {
 	dst := fmt.Sprintf("%s_%d-merged", source, index)
 
 	start := time.Now()
-	vs_result := function_video_split(bucket, source, []string{"sample.mp4"}, split_file_dir, flags.ForceRemote, flags.UseMem)
+	vs_result := function_video_split(bucket, source, []string{"sample.mp4"}, split_file_dir, flags.ForceRemote, flags.UrlPostfix)
 
 	var transcode_result [5]VideoTranscodeResult
 	var merge_object_list []string
@@ -30,7 +30,7 @@ func chain_video_processing(index int, flags Flags) FunctionChainResult {
 			split_file_name := fmt.Sprintf("seg%d_sample.mp4", i+1)
 			merge_file_name := fmt.Sprintf("seg%d_sample.avi", i+1)
 			merge_object_list = append(merge_object_list, merge_file_name)
-			transcode_result[i] = function_video_transcode(bucket, split_file_dir, []string{split_file_name}, merge_file_dir, flags.ForceRemote, flags.UseMem)
+			transcode_result[i] = function_video_transcode(bucket, split_file_dir, []string{split_file_name}, merge_file_dir, flags.ForceRemote, flags.UrlPostfix)
 		}(i)
 	}
 	wg.Wait()
@@ -57,13 +57,13 @@ func chain_video_processing(index int, flags Flags) FunctionChainResult {
 	vt_result.Response.TranscodeDuration /= 5
 	vt_result.Response.UploadDuration /= 5
 
-	vm_result := function_video_merge(bucket, merge_file_dir, merge_object_list, dst, flags.ForceRemote, flags.UseMem)
+	vm_result := function_video_merge(bucket, merge_file_dir, merge_object_list, dst, flags.ForceRemote, flags.UrlPostfix)
 	duration := time.Since(start)
 
 	return FunctionChainResult{int64(start.UnixMicro()), duration.Seconds(), ImageScaleResult{}, ImageRecognitionResult{}, vs_result, vt_result, vm_result}
 }
 
-func function_video_split(bucket string, source string, object_list []string, destination string, forceRemote bool, useMem bool) VideoSplitResult {
+func function_video_split(bucket string, source string, object_list []string, destination string, forceRemote bool, urlPostfix string) VideoSplitResult {
 	var req_data VideoSplitRequest
 	var res_data VideoSplitResponse
 
@@ -80,7 +80,7 @@ func function_video_split(bucket string, source string, object_list []string, de
 	}
 
 	start := time.Now()
-	url := "http://video-split.default.127.0.0.1.sslip.io"
+	url := "http://video-split." + urlPostfix
 	res, err := http.Post(url, "application/json", req)
 	if err != nil {
 		panic(err)
@@ -99,7 +99,7 @@ func function_video_split(bucket string, source string, object_list []string, de
 	return VideoSplitResult{duration.Seconds(), res_data}
 }
 
-func function_video_transcode(bucket string, source string, object_list []string, destination string, forceRemote bool, useMem bool) VideoTranscodeResult {
+func function_video_transcode(bucket string, source string, object_list []string, destination string, forceRemote bool, urlPostfix string) VideoTranscodeResult {
 	var req_data VideoTranscodeRequest
 	var res_data VideoTranscodeResponse
 
@@ -116,7 +116,7 @@ func function_video_transcode(bucket string, source string, object_list []string
 	}
 
 	start := time.Now()
-	url := "http://video-transcode.default.127.0.0.1.sslip.io"
+	url := "http://video-transcode." + urlPostfix
 	res, err := http.Post(url, "application/json", req)
 	if err != nil {
 		panic(err)
@@ -135,7 +135,7 @@ func function_video_transcode(bucket string, source string, object_list []string
 	return VideoTranscodeResult{duration.Seconds(), res_data}
 }
 
-func function_video_merge(bucket string, source string, object_list []string, destination string, forceRemote bool, useMem bool) VideoMergeResult {
+func function_video_merge(bucket string, source string, object_list []string, destination string, forceRemote bool, urlPostfix string) VideoMergeResult {
 	var req_data VideoMergeRequest
 	var res_data VideoMergeResponse
 
@@ -152,7 +152,7 @@ func function_video_merge(bucket string, source string, object_list []string, de
 	}
 
 	start := time.Now()
-	url := "http://video-merge.default.127.0.0.1.sslip.io"
+	url := "http://video-merge." + urlPostfix
 	res, err := http.Post(url, "application/json", req)
 	if err != nil {
 		panic(err)
