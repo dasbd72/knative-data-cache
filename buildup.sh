@@ -39,26 +39,3 @@ docker rmi johnson684/video-merge:latest -f
 docker build --network=host -t johnson684/video-merge:latest -f video-merge/Dockerfile .
 docker push johnson684/video-merge:latest
 
-# pv
-kubectl apply -f yamls/pv.yaml
-kubectl apply -f yamls/pvc.yaml
-
-# delete
-# apps
-kubectl delete -f yamls/app-image-chain.yaml
-kubectl delete -f yamls/app-video-chain.yaml
-
-# controller
-kubectl delete -f yamls/manager.yaml
-kubectl delete -f yamls/data-serve.yaml
-kubectl delete -f yamls/cache-deleter.yaml
-
-# add
-# controller
-kubectl apply -f yamls/manager.yaml
-kubectl apply -f yamls/data-serve.yaml
-kubectl apply -f yamls/cache-deleter.yaml
-
-# apps
-kubectl apply -f yamls/app-image-chain.yaml
-kubectl apply -f yamls/app-video-chain.yaml
