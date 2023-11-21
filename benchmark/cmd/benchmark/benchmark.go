@@ -31,6 +31,12 @@ func init() {
 	flag.StringVar(&flags.LogDir, "log-dir", "logs", "log directory")
 
 	flag.Parse()
+
+	if flags.ForceRemote {
+		flags.LogName = fmt.Sprintf("%s-remote-%s", flags.WorkflowType, time.Now().Format("06010-21504"))
+	} else {
+		flags.LogName = fmt.Sprintf("%s-%s", flags.WorkflowType, time.Now().Format("06010-21504"))
+	}
 }
 
 func main() {
@@ -43,7 +49,7 @@ func main() {
 		panic(err)
 	}
 	// open log file
-	f, err := os.OpenFile(fmt.Sprintf("%s/%s-%d.log", flags.LogDir, flags.WorkflowType, time.Now().Unix()), os.O_RDWR|os.O_CREATE, 0666)
+	f, err := os.OpenFile(fmt.Sprintf("%s/%s.log", flags.LogDir, flags.LogName), os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		panic(err)
 	}
@@ -219,7 +225,7 @@ func benchmark(flags Flags) {
 	log.Println(string(p))
 
 	// Write json file
-	f, err := os.OpenFile(fmt.Sprintf("%s/%s-%d.json", flags.LogDir, flags.WorkflowType, time.Now().Unix()), os.O_RDWR|os.O_CREATE, 0666)
+	f, err := os.OpenFile(fmt.Sprintf("%s/%s.json", flags.LogDir, flags.LogName), os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		panic(err)
 	}

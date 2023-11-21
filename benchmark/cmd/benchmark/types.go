@@ -10,6 +10,7 @@ type Flags struct {
 	Warmup       bool    `json:"warmup"`
 	WorkflowType string  `json:"workflow_type"`
 	LogDir       string  `json:"log_dir"`
+	LogName      string  `json:"log_name"`
 }
 
 type BenchmarkResult struct {
