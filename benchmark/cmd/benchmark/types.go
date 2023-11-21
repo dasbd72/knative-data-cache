@@ -9,9 +9,12 @@ type Flags struct {
 	ForceRemote  bool    `json:"force_remote"`
 	Warmup       bool    `json:"warmup"`
 	WorkflowType string  `json:"workflow_type"`
+	LogDir       string  `json:"log_dir"`
 }
 
 type BenchmarkResult struct {
+	Flags Flags `json:"flags"`
+
 	Duration      float64 `json:"duration"`
 	TotalDuration float64 `json:"total_duration"`
 
