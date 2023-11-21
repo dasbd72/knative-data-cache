@@ -154,6 +154,7 @@ func benchmark(flags Flags) {
 
 	var benchmark_result BenchmarkResult
 
+	benchmark_result.Flags = flags
 	benchmark_result.Duration = duration.Seconds()
 
 	for _, result := range results {
