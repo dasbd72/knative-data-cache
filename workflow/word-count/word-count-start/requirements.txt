@@ -1,0 +1,5 @@
+flask
+minio
+psutil
+etcd3
+protobuf==3.20.*
