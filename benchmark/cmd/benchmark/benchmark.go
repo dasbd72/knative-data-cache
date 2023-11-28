@@ -28,8 +28,15 @@ func init() {
 	flag.BoolVar(&flags.ForceRemote, "force-remote", false, "force remote")
 	flag.BoolVar(&flags.Warmup, "warmup", false, "warmup")
 	flag.StringVar(&flags.WorkflowType, "workflow-type", "ImageProcessing", "workflow type")
+	flag.StringVar(&flags.LogDir, "log-dir", "logs", "log directory")
 
 	flag.Parse()
+
+	if flags.ForceRemote {
+		flags.LogName = fmt.Sprintf("%s-remote-%s", flags.WorkflowType, time.Now().Format("06010-21504"))
+	} else {
+		flags.LogName = fmt.Sprintf("%s-%s", flags.WorkflowType, time.Now().Format("06010-21504"))
+	}
 }
 
 func main() {
@@ -42,7 +49,7 @@ func main() {
 		panic(err)
 	}
 	// open log file
-	f, err := os.OpenFile(fmt.Sprintf("logs/%d.log", time.Now().Unix()), os.O_RDWR|os.O_CREATE, 0666)
+	f, err := os.OpenFile(fmt.Sprintf("%s/%s.log", flags.LogDir, flags.LogName), os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		panic(err)
 	}
@@ -153,6 +160,7 @@ func benchmark(flags Flags) {
 
 	var benchmark_result BenchmarkResult
 
+	benchmark_result.Flags = flags
 	benchmark_result.Duration = duration.Seconds()
 
 	for _, result := range results {
@@ -212,5 +220,15 @@ func benchmark(flags Flags) {
 	if err != nil {
 		panic(err)
 	}
+
+	// Write to log
 	log.Println(string(p))
+
+	// Write json file
+	f, err := os.OpenFile(fmt.Sprintf("%s/%s.json", flags.LogDir, flags.LogName), os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	f.Write(p)
 }
